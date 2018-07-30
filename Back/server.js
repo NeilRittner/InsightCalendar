@@ -14,7 +14,7 @@ app.use("/static", express.static("public"));
 app.use("/api", api);
 
 app.get("/", function (req, res) {
-  res.send("Welcome on the root of the server");
+  res.send("Welcome to the root of the server");
 });
 
 

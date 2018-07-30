@@ -6,7 +6,7 @@ const app = express();
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const session = require('express-session');
-const utilities = require("../libraries/utilities");
+const utilities = require("../libraries/connection");
 
 
 // Set the npm dependencies
@@ -30,7 +30,7 @@ app.get("/helloworld", function (req, res, next) {
 app.post("/tokenGoogle", function (req, res) {
   utilities.verify(req.body.idtoken).then(payload => {
     session.user = payload;
-    res.send("OK");
+    res.send();
   })
     .catch(console.error);
 });
