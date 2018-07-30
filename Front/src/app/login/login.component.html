@@ -1,0 +1,19 @@
+<p>
+  Welcome on {{ title }}
+</p>
+
+<button (click)="signinWithGoogle()">Sign in with Google</button>
+
+<p>
+  Or swipe your card
+</p>
+
+<div>
+  <form>
+    <div>
+      <label for="name"> Your Card's ID: </label>
+      <input type="password" class="form-control" id="cardid" required [(ngModel)]="idCard" name="card" autofocus>
+    </div>
+    <button (click)="signinWithCard()"></button>
+  </form>
+</div>
