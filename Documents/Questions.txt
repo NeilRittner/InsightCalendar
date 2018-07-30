@@ -1,0 +1,118 @@
+Pour Vendredi 13 Juillet:
+- You told me that there are templates for analytics/data visualization, have you any other information about it?
+-->
+
+- About the "IoT enabled": we spoke about the Insight's cards, it will be the only "IoT device" that can be used or there are others? If yes, I do not really understand if the relation ID-Number is made by the card or if I have to create it for each card?
+-->
+
+- Why do an id-number relation? Because at the end, we need the name of the person, then, it will be necessary to have a relation number-name.
+-->
+
+- Where will the database and the server be hosted?
+-->
+
+- News: Is there an API for the Insight's news like the BBC API?
+-->
+
+- Is it necessary to manage connexion with the google account ? 
+-->
+
+-
+-->
+
+-
+-->
+
+Se concentrer sur 3 fonctionnalités : le booking (de salle), l'occupation (d'une salle) et indicateur pour la personne
+1 ligne = 1 jour : important, dans le sens du temps, mais attention à bien adapter selon "la densité".
+
+Lundi/Mardi : architecture : Step 1:, Step 2:, ....
+Faire une table : Numéro badge - Personne
+
+---------------------------------------------------------------------------------
+Pour Vendredi 20 Juillet:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 27 Juillet:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 3 Aout:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 10 Aout::
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 17 Aout:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 24 Aout:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 31 Aout:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 7 Septembre:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 14 Septembre:
+-
+-->
+
+-
+-->
+
+---------------------------------------------------------------------------------
+Pour Vendredi 21 Septembre:
+-
+-->
+
+-
+-->
+
+
+
+
+
+
+
+
