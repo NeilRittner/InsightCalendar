@@ -6,7 +6,7 @@ const app = express();
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const session = require('express-session');
-const utilities = require("../libraries/connection");
+const connection = require("../libraries/connection");
 
 
 // Set the npm dependencies
@@ -28,22 +28,33 @@ app.get("/helloworld", function (req, res, next) {
 
 // TokenGoogle: used to verify a token
 app.post("/tokenGoogle", function (req, res) {
-  utilities.verify(req.body.idtoken).then(payload => {
-    session.user = payload;
-    res.send();
+  connection.verifyGoogleToken(req.body.idToken).then(payload => {
+    connection.getUserInformation(payload).then(user => {
+      session.user = user;
+      res.send('200');
+    });
   })
     .catch(console.error);
 });
 
 // Card: used to connect a user with his card
 app.post("/card", function (req, res) {
-  //Vérifier que ça existe en bdd + aller chercher l'utilisateur
-  session.user = {
-    given_name: "neil",
-    family_name: "rittner"
-  }
-  res.send();
+  // Vérifier que ça existe en bdd + aller chercher l'utilisateur
+  connection.verifyCard(req.body.idCard).then(user => {
+    if (user) {
+      session.user = user;
+      res.send('200');
+    }
+    else {
+      res.send('404');
+    }
+  });
 });
+
+app.post("/associate", function (req, res) {
+  console.log(req.body.idToken);
+  console.log(req.body.idCard);
+})
 
 // User: send the session's user (the connected user)
 app.get("/user", function (req, res) {
