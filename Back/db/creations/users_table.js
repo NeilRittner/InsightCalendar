@@ -16,11 +16,11 @@ con.connect(function (err) {
   if (err) throw err;
   
   const sql = `CREATE TABLE if not exists users(
-    IdAccessCard varchar(255) primary key,
+    IdGoogle varchar(255) primary key,
     LastName varchar(255)not null,
     FirstName varchar(255)not null,
     Email varchar(255)not null,
-    IdGoogle varchar(255)not null,
+    IdCard varchar(255),
     Status int not null default 1,
     LastScanPosition varchar(255)
   )`;
