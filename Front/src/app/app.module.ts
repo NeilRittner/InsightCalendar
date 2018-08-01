@@ -2,17 +2,17 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-
 import { AppComponent } from './app.component';
-
 import { SocialLoginModule, AuthServiceConfig } from 'angular-6-social-login';
 import { getAuthServiceConfigs } from './socialloginConfig';
 import { AppRoutingModule, RoutingComponents } from './/app-routing.module';
+import { RegisterComponent } from './register/register.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    RoutingComponents
+    RoutingComponents,
+    RegisterComponent
   ],
   imports: [
     BrowserModule,
