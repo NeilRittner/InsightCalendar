@@ -1,5 +1,5 @@
 <p>
-  Welcome on {{ title }}
+  Welcome on the connection page
 </p>
 
 <button (click)="signinWithGoogle()">Sign in with Google</button>
@@ -15,5 +15,19 @@
       <input type="password" class="form-control" id="cardid" required [(ngModel)]="idCard" name="card" autofocus>
     </div>
     <button (click)="signinWithCard()"></button>
+  </form>
+</div>
+
+<br>
+
+<button (click)="writeGoogleAccount()">Associate card and account</button>
+
+<div>
+  <form>
+    <div>
+      <label for="name"> Your Card's ID: </label>
+      <input type="password" class="form-control" id="cardidAsso" required [(ngModel)]="idCardAsso" name="cardAsso">
+    </div>
+    <button (click)="scanCard()"></button>
   </form>
 </div>

@@ -1,5 +1,5 @@
+import { RemoteService } from './../remote.service';
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-home',
@@ -8,23 +8,15 @@ import { HttpClient } from '@angular/common/http';
 })
 
 export class HomeComponent implements OnInit {
-  constructor(private http: HttpClient) { }
+  constructor(private service: RemoteService) { }
 
   user = {};
 
-  getUser() {
-    return this.http.get("http://localhost:8080/api/user", { withCredentials: true });
-  }
-
-  showUser() {
-    this.getUser()
+  ngOnInit() {
+    this.service.getUser()
       .subscribe(data => {
         this.user = data;
       });
-  }
-
-  ngOnInit() {
-    this.showUser();
   }
 
 }
