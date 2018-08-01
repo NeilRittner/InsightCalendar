@@ -1,0 +1,13 @@
+<button (click)="enterGoogleAccount()"> Sign in with Google </button>
+
+<p> and then </p>
+
+<div>
+  <form>
+    <div>
+      <label for="name"> Scan your card </label>
+      <input type="password" class="form-control" id="cardForm" [(ngModel)]="idCard" name="card" required autofocus>
+    </div>
+    <button (click)="registerCard()"></button>
+  </form>
+</div>
