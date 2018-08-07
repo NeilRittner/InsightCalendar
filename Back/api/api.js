@@ -1,17 +1,22 @@
 "use strict";
 
-// npm dependencies and libraries
+// npm dependencies
 require('dotenv').config()
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
+
+
+// Own libraries
 const connection = require('../libraries/connection');
+const authorization = require('../libraries/authorization');
+const calendars = require('../libraries/calendars');
 
 
 // Set the npm dependencies
-app.use(cors({ credentials: true, origin: 'http://localhost:4200' }));
+app.use(cors({ credentials: true, origin: process.env.ORIGIN }));
 app.use(session({
   secret: process.env.SECRET,
   resave: false,
@@ -21,42 +26,59 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
-// Routing
-
-/* Route: googleAccess
-* This route is used to verify the idToken sent by the client-side and set the session user.
-* Return a status code:
-* 200: OK
-* 500: Internal Error
-* 498: Token not valid
-*/
-app.post("/googleAccess", function (req, res) {
+// The routes
+/**
+ * Route: googleAccess
+ * This route is used to verify the idToken sent by the client-side and set the session user.
+ * Return a status code:
+ * 200: OK
+ * 500: Internal Error
+ * 498: Token not valid
+ */
+app.post('/googleAccess', function (req, res) {
   connection.verifyGoogleToken(req.body.idToken).then(payload => {
-    connection.getUserInformation(payload).then(user => {
-      session.user = user;
-      res.send('200');
+    connection.getUserInformation(payload).then(userInfo => {
+      session.userInfo = userInfo;
+      session.authClient = authorization.setOAuth2Client();
+      res.setHeader('Content-Type', 'application/json');
+      authorization.hasTokens(session.userInfo['IdGoogle']).then(tokens => {
+        if (tokens) {
+          session.authClient.setCredentials(tokens);
+          calendars.displayCalendar(session.authClient);
+          res.send(JSON.stringify({ 'status': '200' }));
+        }
+        else {
+          let url = authorization.getAuthUrl(session.authClient);
+          url = url + '&login_hint=' + session.userInfo['IdGoogle'];
+          res.send(JSON.stringify({ 'url': url }));
+        }
+      })
+      .catch(err => {
+        res.send(JSON.stringify({ 'status': '500' }));
+      });
     })
     .catch(err => {
-      res.send('500');
-    })
+      res.send(JSON.stringify({ 'status': '500' }));
+    });
   })
   .catch(err =>  {
-    res.send('498');
+    res.send(JSON.stringify({ 'status': '498' }));
   });
 });
 
-/* Route: cardAccess
-* This route is used to verify the id of the card sent by the client-side and set the session user.
-* Return a status code:
-* 200: OK
-* 404: User not find
-* 500: Internal Error
-*/
-app.post("/cardAccess", function (req, res) {
+
+/**
+ * Route: cardAccess
+ * This route is used to verify the id of the card sent by the client-side and set the session user.
+ * Return a status code:
+ * 200: OK
+ * 404: User not find
+ * 500: Internal Error
+ */
+app.post('/cardAccess', function (req, res) {
   connection.verifyCard(req.body.idCard).then(user => {
     if (user) {
-      console.log(user);
-      session.user = user;
+      session.userInfo = user;
       res.send('200');
     }
     else {
@@ -68,18 +90,19 @@ app.post("/cardAccess", function (req, res) {
   });
 });
 
-/* Route: registerCard
-* This route is used to link an idCard to a user (for the IoT Access enabled).
-* Return a status code:
-* 200: OK
-* 500: Internal Error
-* 498: Token not valid
-*/
-app.post("/registerCard", function (req, res) {
+
+/**
+ * Route: registerCard
+ * This route is used to link an idCard to a user (for the IoT Access enabled).
+ * Return a status code:
+ * 200: OK
+ * 500: Internal Error
+ * 498: Token not valid
+ */
+app.post('/registerCard', function (req, res) {
   connection.verifyGoogleToken(req.body.idToken).then(payload => {
     connection.registerCard(payload, req.body.idCard).then(user => {
-      console.log('User api:   ' + user);
-      session.user = user;
+      session.userInfo = user;
       res.send('200');
     })
     .catch(err => {
@@ -89,15 +112,37 @@ app.post("/registerCard", function (req, res) {
   .catch(err => {
     res.send('498');
   });
-})
+});
 
-/* Route: currentUser
-* This route is used to send information about the currentUser to the client-side.
-* Return a json object as :
-* { 'IdGoogle':, 'LastName':, 'FirstName':, 'Email': }
-*/
-app.get("/currentUser", function (req, res) {
-  res.send(session.user);
-})
+
+/**
+ * Route: currentUser
+ * This route is used to send information about the currentUser to the client-side.
+ * Return a json object as :
+ * { 'IdGoogle':, 'LastName':, 'FirstName':, 'Email': }
+ */
+app.get('/currentUser', function (req, res) {
+  res.send(session.userInfo);
+});
+
+
+/**
+ * Route: code
+ * This route will be used to receive the code, exchange it against the access and refresh tokens and store them.
+ */
+app.post('/code', function (req, res) {
+  authorization.getTokens(req.body.code).then(tokens => {
+    session.authClient.credentials = tokens;
+    authorization.storeTokens(session.userInfo['IdGoogle'], tokens['access_token'], tokens['refresh_token']).then(() => {
+      res.send('200');
+    })
+    .catch(err => {
+      res.send('500');
+    });
+  })
+  .catch(err => {
+    res.send('400');
+  });
+});
 
 module.exports = app;

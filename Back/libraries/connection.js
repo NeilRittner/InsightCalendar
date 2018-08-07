@@ -3,7 +3,7 @@
 // npm dependencies and libraries
 require('dotenv').config();
 const { OAuth2Client } = require('google-auth-library');
-const pool = require("../db/pool");
+const pool = require('../db/pool');
 
 
 // The functions
@@ -35,11 +35,11 @@ module.exports = {
   },
 
   googleUserExist: function (googleUserId) {
-    const query = `SELECT * FROM users WHERE IdGoogle = ${googleUserId}`;
+    const query = `SELECT IdGoogle, LastName, FirstName, Email FROM users WHERE IdGoogle = ${ googleUserId }`;
 
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
-        if (!err) resolve(row);
+        if (!err) resolve(row[0]);
         else reject(err);
       });
     });
@@ -78,12 +78,12 @@ module.exports = {
   },
 
   verifyCard: function (idCard) {
-    const query = `SELECT * FROM users WHERE IdCard = ${ idCard }`;
+    const query = `SELECT IdGoogle, LastName, FristName, Email FROM users WHERE IdCard = ${ idCard }`;
 
     return new Promise((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err, rows) {
+      pool.calendar_pool.query(query, function (err, row) {
         if (!err) {
-          if (rows.length) resolve(rows[0]);
+          if (row.length) resolve(rows[0]);
           else resolve(null);
         }
         else reject(err);
@@ -103,7 +103,7 @@ module.exports = {
           });
         }
         else {
-          this.updateCard(googleUserInfo['sub'], idCard).then(data3 => {
+          this.updateCard(googleUserInfo['sub'], idCard).then(() => {
             resolve(data[0]);
           })
           .catch(err => {
@@ -120,7 +120,7 @@ module.exports = {
   updateCard: function (googleUserId, idCard) {
     const query = `UPDATE users SET IdCard = ${idCard} WHERE IdGoogle = ${googleUserId}`;
     return new Promise ((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err, result) {
+      pool.calendar_pool.query(query, function (err) {
         if (!err) resolve('row updated');
         else reject(err);
       });
