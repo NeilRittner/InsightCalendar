@@ -23,6 +23,9 @@
     "express": "^4.16.3",
     "express-session": "^1.15.6",
     "google-auth-library": "^1.6.1",
-    "mysql": "^2.16.0"
+    "googleapis": "^27.0.0",
+    "mysql": "^2.16.0",
+    "request": "^2.87.0",
+    "socket.io": "^2.1.1"
   }
 }
