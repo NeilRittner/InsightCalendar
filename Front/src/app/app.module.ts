@@ -6,13 +6,13 @@ import { AppComponent } from './app.component';
 import { SocialLoginModule, AuthServiceConfig } from 'angular-6-social-login';
 import { getAuthServiceConfigs } from './socialloginConfig';
 import { AppRoutingModule, RoutingComponents } from './/app-routing.module';
-import { RegisterComponent } from './register/register.component';
+import { AuthorizeComponent } from './authorize/authorize.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     RoutingComponents,
-    RegisterComponent
+    AuthorizeComponent
   ],
   imports: [
     BrowserModule,

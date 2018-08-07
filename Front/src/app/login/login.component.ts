@@ -22,11 +22,15 @@ export class LoginComponent implements OnInit {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
     this.socialAuthService.signIn(socialPlatformProvider).then(userData => {
       this.service.postGoogleToken(userData.idToken)
-        .subscribe((status: number) => {
-          if (status === 200) {
+        .subscribe(res => {
+          if (res['status'] === '200') {
             this.router.navigate(['/home']);
-          } else if (status === 500) {
+          } else if (res['status'] === '500') {
             // Print an error: internal error --> restart the process to sign in or try later
+          } else if (res['status'] === '498') {
+            // Print an error: idToken error --> restart the process to sign in or try later
+          } else {
+            window.location.href = res['url'];
           }
         });
     });

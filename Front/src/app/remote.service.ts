@@ -13,10 +13,10 @@ export class RemoteService {
 
   postGoogleToken(token: string) {
     const url = `${environment.serveur_url}api/googleAccess`;
-    const httpOptions = { withCredentials: true, idToken: token, responseType: 'text' };
+    const httpOptions = { withCredentials: true, idToken: token };
 
     return this.http
-      .post<number>(url, httpOptions);
+      .post(url, httpOptions);
   }
 
   postCardId(idCard: string) {
@@ -24,7 +24,7 @@ export class RemoteService {
     const httpOptions = { withCredentials: true, idCard: idCard, responseType: 'text' };
 
     return this.http
-      .post<number>(url, httpOptions);
+      .post(url, httpOptions);
   }
 
   postRegisterCard(token: string, idCard: string) {
@@ -32,11 +32,18 @@ export class RemoteService {
     const httpOptions = { withCredentials: true, idToken: token, idCard: idCard, responseType: 'text' };
 
     return this.http
-      .post<number>(url, httpOptions);
+      .post(url, httpOptions);
+  }
+
+  postCode(code: string) {
+    const url = `${environment.serveur_url}api/code`;
+    const httpOptions = { withCredentials: true, code: code };
+    return this.http
+      .post(url, httpOptions);
   }
 
   getUser(): Observable<any> {
-    const url = `${environment.serveur_url}api/user`;
+    const url = `${environment.serveur_url}api/currentUser`;
     const httpOptions = { withCredentials: true };
 
     return this.http
