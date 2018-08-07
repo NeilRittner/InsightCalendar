@@ -21,6 +21,8 @@ con.connect(function (err) {
     FirstName varchar(255)not null,
     Email varchar(255)not null,
     IdCard varchar(255),
+    AccessToken varchar(255),
+    RefreshToken varchar(255),
     Status int not null default 1,
     LastScanPosition varchar(255)
   )`;
