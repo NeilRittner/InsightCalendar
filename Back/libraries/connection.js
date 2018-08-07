@@ -20,13 +20,13 @@ module.exports = {
 
   getUserInformation: function (googleUserInfo) {
     return new Promise((resolve, reject) => {
-      this.googleUserExist(googleUserInfo['sub']).then(data => {
-        if (data.length === 0) {
-          this.insertNewUser(googleUserInfo).then(data2 => {
-            resolve(data2);
+      this.googleUserExist(googleUserInfo['sub']).then(user => {
+        if (user.length === 0) {
+          this.insertNewUser(googleUserInfo).then(user2 => {
+            resolve(user2);
           });
         } 
-        else resolve(data[0]);
+        else resolve(user[0]);
       })
       .catch(err => {
         reject(err);
@@ -39,7 +39,7 @@ module.exports = {
 
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
-        if (!err) resolve(row[0]);
+        if (!err) resolve(row);
         else reject(err);
       });
     });
@@ -78,12 +78,13 @@ module.exports = {
   },
 
   verifyCard: function (idCard) {
-    const query = `SELECT IdGoogle, LastName, FristName, Email FROM users WHERE IdCard = ${ idCard }`;
+    const query = `SELECT IdGoogle, LastName, FirstName, Email FROM users WHERE IdCard = ${ idCard }`;
 
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
         if (!err) {
-          if (row.length) resolve(rows[0]);
+          console.log(row);
+          if (row.length) resolve(row[0]);
           else resolve(null);
         }
         else reject(err);
@@ -93,10 +94,10 @@ module.exports = {
 
   registerCard: function (googleUserInfo, idCard) {
     return new Promise((resolve, reject) => {
-      this.googleUserExist(googleUserInfo['sub']).then(data => {
-        if (data.length === 0) {
-          this.insertNewUser(googleUserInfo, idCard).then(data2 => {
-            resolve(data2);
+      this.googleUserExist(googleUserInfo['sub']).then(user => {
+        if (user.length === 0) {
+          this.insertNewUser(googleUserInfo, idCard).then(user2 => {
+            resolve(user2);
           })
           .catch(err => {
             reject(err);
@@ -104,7 +105,7 @@ module.exports = {
         }
         else {
           this.updateCard(googleUserInfo['sub'], idCard).then(() => {
-            resolve(data[0]);
+            resolve(user[0]);
           })
           .catch(err => {
             reject(err);
@@ -118,7 +119,7 @@ module.exports = {
   },
 
   updateCard: function (googleUserId, idCard) {
-    const query = `UPDATE users SET IdCard = ${idCard} WHERE IdGoogle = ${googleUserId}`;
+    const query = `UPDATE users SET IdCard = ${ idCard } WHERE IdGoogle = ${ googleUserId }`;
     return new Promise ((resolve, reject) => {
       pool.calendar_pool.query(query, function (err) {
         if (!err) resolve('row updated');
@@ -127,4 +128,4 @@ module.exports = {
     })
   }
 
-}
+};

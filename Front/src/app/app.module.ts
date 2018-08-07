@@ -7,12 +7,14 @@ import { SocialLoginModule, AuthServiceConfig } from 'angular-6-social-login';
 import { getAuthServiceConfigs } from './socialloginConfig';
 import { AppRoutingModule, RoutingComponents } from './/app-routing.module';
 import { AuthorizeComponent } from './authorize/authorize.component';
+import { ReservationsComponent } from './reservations/reservations.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     RoutingComponents,
-    AuthorizeComponent
+    AuthorizeComponent,
+    ReservationsComponent
   ],
   imports: [
     BrowserModule,
