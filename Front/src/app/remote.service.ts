@@ -46,4 +46,11 @@ export class RemoteService {
       .get(url, httpOptions);
   }
 
+  getCalendar() {
+    const url = `${environment.serveur_url}api/userCalendar`;
+    const httpOptions = { withCredentials: true };
+    return this.http
+      .get(url, httpOptions);
+  }
+
 }

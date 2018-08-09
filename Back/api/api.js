@@ -40,11 +40,9 @@ app.post('/googleAccess', function (req, res) {
     connection.getUserInformation(payload).then(userInfo => {
       session.userInfo = userInfo;
       session.authClient = authorization.setOAuth2Client();
-      res.setHeader('Content-Type', 'application/json');
       authorization.hasTokens(session.userInfo['IdGoogle']).then(tokens => {
         if (tokens) {
           session.authClient.setCredentials(tokens);
-          calendars.displayCalendar(session.authClient);
           res.send(JSON.stringify({ 'status': '200' }));
         }
         else {
@@ -104,11 +102,9 @@ app.post('/registerCard', function (req, res) {
     connection.registerCard(payload, req.body.idCard).then(userInfo => {
       session.userInfo = userInfo;
       session.authClient = authorization.setOAuth2Client();
-      res.setHeader('Content-Type', 'application/json');
       authorization.hasTokens(session.userInfo['IdGoogle']).then(tokens => {
         if (tokens) {
           session.authClient.setCredentials(tokens);
-          calendars.displayCalendar(session.authClient);
           res.send(JSON.stringify({ 'status': '200' }));
         }
         else {
@@ -126,7 +122,7 @@ app.post('/registerCard', function (req, res) {
     });
   })
   .catch(err => {
-    res.send(JSON.stringify({ 'status': '500' }));
+    res.send(JSON.stringify({ 'status': '498' }));
   });
 });
 
@@ -134,6 +130,10 @@ app.post('/registerCard', function (req, res) {
 /**
  * Route: code
  * This route will be used to receive the code, exchange it against the access and refresh tokens and store them.
+ * Return a status code:
+ * 200: OK
+ * 500: Internal Error
+ * 400: Error during the request to get the tokens
  */
 app.post('/code', function (req, res) {
   authorization.getTokens(req.body.code).then(tokens => {
@@ -160,5 +160,19 @@ app.post('/code', function (req, res) {
 app.get('/currentUser', function (req, res) {
   res.send(session.userInfo);
 });
+
+/**
+ * 
+ */
+app.get('/userCalendar', function (req, res) {
+  calendars.getUserCalendar(session.authClient).then(events => {
+    res.send(events);
+  })
+  .catch(err => {
+    console.log(err);
+    res.send('500');
+  })
+});
+
 
 module.exports = app;

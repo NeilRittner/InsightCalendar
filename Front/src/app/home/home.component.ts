@@ -17,6 +17,10 @@ export class HomeComponent implements OnInit {
       .subscribe(data => {
         this.user = data;
       });
+    this.service.getCalendar()
+      .subscribe(events => {
+        console.log(events);
+      });
   }
 
 }
