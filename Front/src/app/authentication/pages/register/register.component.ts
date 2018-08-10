@@ -35,7 +35,7 @@ export class RegisterComponent implements OnInit {
         if (data) {
           window.location.href = data;
         } else {
-          this.router.navigate(['/home']);
+          this.router.navigate(['/user']);
         }
       }, (err: HttpErrorResponse) => {
           // console.log(err['status']);
