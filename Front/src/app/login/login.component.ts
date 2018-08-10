@@ -2,6 +2,7 @@ import { RemoteService } from './../remote.service';
 import { Component, OnInit } from '@angular/core';
 import { AuthService, GoogleLoginProvider } from 'angular-6-social-login';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '../../../node_modules/@angular/common/http';
 
 
 @Component({
@@ -22,30 +23,32 @@ export class LoginComponent implements OnInit {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
     this.socialAuthService.signIn(socialPlatformProvider).then(userData => {
       this.service.postGoogleToken(userData.idToken)
-        .subscribe(res => {
-          if (res['status'] === '200') {
-            this.router.navigate(['/home']);
-          } else if (res['status'] === '500') {
-            // Print an error: internal error --> restart the process to sign in or try later
-          } else if (res['status'] === '498') {
-            // Print an error: idToken error --> restart the process to sign in or try later
+        .subscribe((data: string) => {
+          if (data) {
+            window.location.href = data;
           } else {
-            window.location.href = res['url'];
+            this.router.navigate(['/home']);
           }
+        },
+        (err: HttpErrorResponse) => {
+          // console.log(err['status']);
+          // 500: Internal Error Component
+          // 498: message token fake
         });
     });
   }
 
   signinWithCard(): void {
     this.service.postCardId(this.idCard)
-      .subscribe((status: number) => {
-        if (status === 200) {
-          this.router.navigate(['/home']);
-        } else if (status === 404) {
-          // Print an error: card no found
+      .subscribe((data: string) => {
+        if (data) {
+          // Print "error" : user has no card
         } else {
-          // Print an error: internal error --> restart the process to sign in or try later
+          this.router.navigate(['/home']);
         }
+      },
+      (err: HttpErrorResponse) => {
+        // 500: Internal Error Component
       });
   }
 

@@ -43,24 +43,24 @@ app.post('/googleAccess', function (req, res) {
       authorization.hasTokens(session.userInfo['IdGoogle']).then(tokens => {
         if (tokens) {
           session.authClient.setCredentials(tokens);
-          res.send(JSON.stringify({ 'status': '200' }));
+          res.status(200).send();
         }
         else {
           let url = authorization.getAuthUrl(session.authClient);
           url = url + '&login_hint=' + session.userInfo['IdGoogle'];
-          res.send(JSON.stringify({ 'url': url }));
+          res.status(200).send(JSON.stringify(url));
         }
       })
       .catch(err => {
-        res.send(JSON.stringify({ 'status': '500' }));
+        res.status(500).send(err);
       });
     })
     .catch(err => {
-      res.send(JSON.stringify({ 'status': '500' }));
+      res.status(500).send(err);
     });
   })
   .catch(err =>  {
-    res.send(JSON.stringify({ 'status': '498' }));
+    res.status(498).send(err);
   });
 });
 
@@ -77,14 +77,14 @@ app.post('/cardAccess', function (req, res) {
   connection.verifyCard(req.body.idCard).then(userInfo => {
     if (userInfo) {
       session.userInfo = userInfo;
-      res.send('200');
+      res.status(200).send();
     }
     else {
-      res.send('404');
+      res.status(200).send(JSON.stringify('User has no card'));
     }
   })
   .catch(err => {
-    res.send('500');
+    res.status(500).send(err);
   });
 });
 
@@ -105,24 +105,24 @@ app.post('/registerCard', function (req, res) {
       authorization.hasTokens(session.userInfo['IdGoogle']).then(tokens => {
         if (tokens) {
           session.authClient.setCredentials(tokens);
-          res.send(JSON.stringify({ 'status': '200' }));
+          res.status(200).send();
         }
         else {
           let url = authorization.getAuthUrl(session.authClient);
           url = url + '&login_hint=' + session.userInfo['IdGoogle'];
-          res.send(JSON.stringify({ 'url': url }));
+          res.status(200).send(JSON.stringify(url));
         }
       })
       .catch(err => {
-        res.send(JSON.stringify({ 'status': '500' }));
+        res.status(500).send(err);
       });
     })
     .catch(err => {
-      res.send(JSON.stringify({ 'status': '500' }));
+      res.status(500).send(err);
     });
   })
   .catch(err => {
-    res.send(JSON.stringify({ 'status': '498' }));
+    res.status(498).send(err);
   });
 });
 
@@ -133,20 +133,19 @@ app.post('/registerCard', function (req, res) {
  * Return a status code:
  * 200: OK
  * 500: Internal Error
- * 400: Error during the request to get the tokens
  */
 app.post('/code', function (req, res) {
   authorization.getTokens(req.body.code).then(tokens => {
     session.authClient.credentials = tokens;
     authorization.storeTokens(session.userInfo['IdGoogle'], tokens['access_token'], tokens['refresh_token']).then(() => {
-      res.send('200');
+      res.status(200).send();
     })
     .catch(err => {
-      res.send('500');
+      res.status(500).send(err);
     });
   })
   .catch(err => {
-    res.send('400');
+    res.status(500).send(err);
   });
 });
 
@@ -158,7 +157,8 @@ app.post('/code', function (req, res) {
  * { 'IdGoogle':, 'LastName':, 'FirstName':, 'Email': }
  */
 app.get('/currentUser', function (req, res) {
-  res.send(session.userInfo);
+  if (session.userInfo) res.send(session.userInfo);
+  else res.status(500).send('User not set');
 });
 
 /**
@@ -169,8 +169,7 @@ app.get('/userCalendar', function (req, res) {
     res.send(events);
   })
   .catch(err => {
-    console.log(err);
-    res.send('500');
+    res.status(500).send(err);
   })
 });
 

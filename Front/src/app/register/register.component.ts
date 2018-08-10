@@ -2,12 +2,14 @@ import { RemoteService } from './../remote.service';
 import { Component, OnInit } from '@angular/core';
 import { AuthService, GoogleLoginProvider } from 'angular-6-social-login';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '../../../node_modules/@angular/common/http';
 
 @Component({
   selector: 'app-register',
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
+
 export class RegisterComponent implements OnInit {
 
   constructor(private socialAuthService: AuthService,
@@ -27,17 +29,18 @@ export class RegisterComponent implements OnInit {
 
   registerCard() {
     this.service.postRegisterCard(this.idToken, this.idCard)
-      .subscribe(res => {
-        if (res['status'] === '200') {
-          this.router.navigate(['/home']);
-        } else if (res['status'] === '500') {
-          // Print an error: internal error --> restart the process to sign in or try later
-        } else if (res['status'] === '498') {
-          // Print an error: idToken error --> restart the process to sign in or try later
+      .subscribe((data: string) => {
+        if (data) {
+          window.location.href = data;
         } else {
-          window.location.href = res['url'];
+          this.router.navigate(['/home']);
         }
-      });
+      },
+        (err: HttpErrorResponse) => {
+          // console.log(err['status']);
+          // 500: Internal Error Component
+          // 498: message token fake
+        });
   }
 
   ngOnInit() {
