@@ -1,16 +1,17 @@
-import { environment } from './../environments/environment';
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
+export class AuthenticationService {
 
-export class RemoteService {
-
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient
+  ) { }
 
   postGoogleToken(token: string): Observable<any> {
     const url = `${environment.serveur_url}api/googleAccess`;
@@ -43,21 +44,4 @@ export class RemoteService {
       .post(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
-
-  getUser(): Observable<any> {
-    const url = `${environment.serveur_url}api/currentUser`;
-    const httpOptions = { withCredentials: true };
-    return this.http
-      .get(url, httpOptions)
-      .pipe(catchError(err => throwError(err)));
-  }
-
-  getCalendar(): Observable<any> {
-    const url = `${environment.serveur_url}api/userCalendar`;
-    const httpOptions = { withCredentials: true };
-    return this.http
-      .get(url, httpOptions)
-      .pipe(catchError(err => throwError(err)));
-  }
-
 }

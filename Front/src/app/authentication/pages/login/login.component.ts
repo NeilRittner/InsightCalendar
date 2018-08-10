@@ -1,36 +1,37 @@
-import { RemoteService } from './../remote.service';
 import { Component, OnInit } from '@angular/core';
-import { AuthService, GoogleLoginProvider } from 'angular-6-social-login';
 import { Router } from '@angular/router';
-import { HttpErrorResponse } from '../../../node_modules/@angular/common/http';
+import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
 
+import { AuthenticationService } from './../../shared/authentication.service';
+
+import { AuthService, GoogleLoginProvider } from 'angular-6-social-login';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-
 export class LoginComponent implements OnInit {
-  constructor(private socialAuthService: AuthService,
+
+  constructor(
+    private service: AuthenticationService,
     private router: Router,
-    private service: RemoteService
+    private authService: AuthService
   ) { }
 
   private idCard: string;
 
   signinWithGoogle(): void {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
-    this.socialAuthService.signIn(socialPlatformProvider).then(userData => {
+    this.authService.signIn(socialPlatformProvider).then(userData => {
       this.service.postGoogleToken(userData.idToken)
         .subscribe((data: string) => {
           if (data) {
             window.location.href = data;
           } else {
-            this.router.navigate(['/home']);
+            this.router.navigate(['/user']);
           }
-        },
-        (err: HttpErrorResponse) => {
+        }, (err: HttpErrorResponse) => {
           // console.log(err['status']);
           // 500: Internal Error Component
           // 498: message token fake
@@ -44,10 +45,9 @@ export class LoginComponent implements OnInit {
         if (data) {
           // Print "error" : user has no card
         } else {
-          this.router.navigate(['/home']);
+          this.router.navigate(['/user']);
         }
-      },
-      (err: HttpErrorResponse) => {
+      }, (err: HttpErrorResponse) => {
         // 500: Internal Error Component
       });
   }
@@ -57,6 +57,7 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit() {
+    console.log('yolo');
   }
 
 }

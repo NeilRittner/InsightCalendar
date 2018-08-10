@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  serveur_url: 'http://localhost:8080/'
+  serveur_url: 'http://localhost:8080/',
+  id_client: '629111666736-3i2vp98mgii0061lju1r767ubp47vi12.apps.googleusercontent.com'
 };
 
 /*
