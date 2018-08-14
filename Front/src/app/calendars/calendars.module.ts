@@ -7,7 +7,8 @@ import { UserComponent } from './pages/user/user.component';
 import { RoomComponent } from './pages/room/room.component';
 import { BookingComponent } from './pages/booking/booking.component';
 
-import { CalendarsService } from './shared/calendars.service';
+import { CalendarsService } from './shared/httpService/calendars.service';
+import { DataService } from './shared/dataService/data.service';
 
 import { routing } from './calendars-routing.module';
 import { HeaderComponent } from './components/header/header.component';
@@ -26,7 +27,8 @@ import { HeaderComponent } from './components/header/header.component';
     HeaderComponent
   ],
   providers: [
-    CalendarsService
+    CalendarsService,
+    DataService
   ],
   exports: []
 })

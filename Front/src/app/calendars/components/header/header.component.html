@@ -1,29 +1,42 @@
-<!-- <p>
-  First Name: {{ user.FirstName }}
-  <br> 
-  User Last Name: {{ user.LastName }}
-</p> -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <!-- Prévoir le status dans le brand sous forme de rond de couleur? -->
+  <span class="navbar-brand mb-0 h1 name">{{user.FirstName}} {{user.LastName}}</span>
+  
+  <div class="collapse navbar-collapse">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
+        <a class="nav-link" [routerLink]="['/user']">
+          Home
+        </a>
+      </li>
 
-<nav class="navbar navbar-expand-sm bg-light navbar-light">
-  <ul class="navbar-nav">
-    <li class="nav-item active">
-      <a class="nav-link" href="/user">Home</a>
-    </li>
-    <li class="nav-item dropdown">
+      <li class="nav-item" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
+        <a class="nav-link" [routerLink]="['/booking']">
+          Booking
+        </a>
+      </li>
+
+      <li class="nav-item" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
+        <a class="nav-link" [routerLink]="['/room']">
+          Room
+        </a>
+      </li>
+    </ul>
+
+    <div *ngIf="router.url !== '/room'" class="nav-item dropdown">
       <a class="nav-link dropdown-toggle" id="navbardrop" data-toggle="dropdown">
-        Dropdown link
+        {{timeScale}}
       </a>
       <div class="dropdown-menu">
-        <a class="dropdown-item" (click)="changeTimeScale('day')">Day</a>
-        <a class="dropdown-item" (click)="changeTimeScale('week')">Week</a>
-        <a class="dropdown-item" (click)="changeTimeScale('month')">Month</a>
+        <button class="dropdown-item" (click)="changeTimeScale('Day')">Day</button>
+        <button class="dropdown-item" (click)="changeTimeScale('Week')">Week</button>
+        <button class="dropdown-item" (click)="changeTimeScale('Month')">Month</button>
       </div>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="/booking">Booking</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="/room">Room</a>
-    </li>
-  </ul>
+    </div>
+
+    <form class="form-inline">
+      <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+      <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+    </form>
+  </div>
 </nav>

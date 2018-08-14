@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
 import { formatDate } from '../../../../../node_modules/@angular/common';
 
-import { CalendarsService } from './../../shared/calendars.service';
+import { CalendarsService } from '../../shared/httpService/calendars.service';
+import { DataService } from './../../shared/dataService/data.service';
 
 @Component({
   selector: 'app-user',
@@ -12,44 +13,23 @@ import { CalendarsService } from './../../shared/calendars.service';
 export class UserComponent implements OnInit {
 
   constructor(
-    private service: CalendarsService
+    private httpService: CalendarsService,
+    private dataService: DataService
   ) { }
 
-  user = {};
   timescale: string;
   events = [];
 
   getUser(): void {
-    this.service.getUser()
+    this.httpService.getUser()
       .subscribe(user => {
         // Do something else?
-        this.user = user;
+        this.dataService.user = user;
       }, (err: HttpErrorResponse) => {
           // console.log(err['status']);
           // 500: Internal Error Component
       });
   }
-
-  // getEvents(): void {
-  //   this.service.getCalendar()
-  //     .subscribe(events => {
-  //       this.timescale = events['timescale'];
-  //       this.events = events['events'];
-  //       this.events.forEach(event => {
-  //         this.service.getName(event['organizer']['email']).subscribe(name => {
-  //           event['organizer']['name'] = name['FirstName'] + ' ' + name['LastName'];
-  //         }, (err: HttpErrorResponse) => {
-  //           // Traiter l'erreur 500
-  //         });
-  //         event['date'] = this.extractDate(event['start']['dateTime']);
-  //         event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
-  //         event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
-  //       });
-  //     }, (err: HttpErrorResponse) => {
-  //         // console.log(err['status']);
-  //         // 500: Internal Error Component
-  //     });
-  // }
 
   extractDate(dateISOS: string): string {
     return formatDate(dateISOS, 'fullDate', 'en-US');
@@ -59,34 +39,14 @@ export class UserComponent implements OnInit {
     return formatDate(dateISOS, 'mediumTime', 'en-US');
   }
 
-  changeTimeScale(newTimeScale: string) {
-    this.service.setNewTimeScale(newTimeScale)
-      .subscribe(events => {
-        this.timescale = events['timescale'];
-        this.events = events['events'];
-        this.events.forEach(event => {
-          this.service.getName(event['organizer']['email']).subscribe(name => {
-            event['organizer']['name'] = name['FirstName'] + ' ' + name['LastName'];
-          }, (err: HttpErrorResponse) => {
-            // Traiter l'erreur 500
-          });
-          event['date'] = this.extractDate(event['start']['dateTime']);
-          event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
-          event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
-        });
-      }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
-      });
-  }
-
   getCalendar(timeScale?: string) {
-    this.service.getCalendar(timeScale)
+    this.httpService.getCalendar(timeScale)
       .subscribe(events => {
         this.timescale = events['timescale'];
+        this.dataService.userTimeScale = events['timescale'];
         this.events = events['events'];
         this.events.forEach(event => {
-          this.service.getName(event['organizer']['email']).subscribe(name => {
+          this.httpService.getName(event['organizer']['email']).subscribe(name => {
             event['organizer']['name'] = name['FirstName'] + ' ' + name['LastName'];
           }, (err: HttpErrorResponse) => {
             // Traiter l'erreur 500
@@ -102,8 +62,15 @@ export class UserComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.getUser();
-    this.getCalendar();
+    if (JSON.stringify(this.dataService.user) === '{}') {
+      this.getUser();
+    }
+
+    if (this.dataService.userTimeScale) {
+      this.getCalendar(this.dataService.userTimeScale);
+    } else {
+      this.getCalendar();
+    }
   }
 
 }
