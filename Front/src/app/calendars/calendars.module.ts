@@ -10,6 +10,7 @@ import { BookingComponent } from './pages/booking/booking.component';
 import { CalendarsService } from './shared/calendars.service';
 
 import { routing } from './calendars-routing.module';
+import { HeaderComponent } from './components/header/header.component';
 
 @NgModule({
   imports: [
@@ -21,7 +22,8 @@ import { routing } from './calendars-routing.module';
   declarations: [
     UserComponent,
     RoomComponent,
-    BookingComponent
+    BookingComponent,
+    HeaderComponent
   ],
   providers: [
     CalendarsService

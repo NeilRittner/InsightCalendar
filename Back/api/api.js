@@ -36,32 +36,35 @@ app.use(bodyParser.urlencoded({ extended: true }));
  * 498: Token not valid
  */
 app.post('/googleAccess', function (req, res) {
-  connection.verifyGoogleToken(req.body.idToken).then(payload => {
-    connection.getUserInformation(payload).then(userInfo => {
-      session.userInfo = userInfo;
-      session.authClient = authorization.setOAuth2Client();
-      authorization.hasTokens(session.userInfo['IdGoogle']).then(tokens => {
-        if (tokens) {
-          session.authClient.setCredentials(tokens);
-          res.status(200).send();
-        }
-        else {
-          let url = authorization.getAuthUrl(session.authClient);
-          url = url + '&login_hint=' + session.userInfo['IdGoogle'];
-          res.status(200).send(JSON.stringify(url));
-        }
-      })
-      .catch(err => {
-        res.status(500).send(err);
-      });
+  connection.verifyGoogleToken(req.body.idToken)
+    .then(payload => {
+      connection.getUserInformation(payload)
+        .then(userInfo => {
+          session.userInfo = userInfo;
+          session.authClient = authorization.setOAuth2Client();
+          authorization.hasTokens(session.userInfo['IdGoogle'])
+            .then(tokens => {
+              if (tokens) {
+                session.authClient.setCredentials(tokens);
+                res.status(200).send();
+              }
+              else {
+                let url = authorization.getAuthUrl(session.authClient);
+                url = url + '&login_hint=' + session.userInfo['IdGoogle'];
+                res.status(200).send(JSON.stringify(url));
+              }
+            })
+            .catch(err => {
+              res.status(500).send(err);
+            });
+        })
+        .catch(err => {
+          res.status(500).send(err);
+        });
     })
-    .catch(err => {
-      res.status(500).send(err);
+    .catch(err =>  {
+      res.status(498).send(err);
     });
-  })
-  .catch(err =>  {
-    res.status(498).send(err);
-  });
 });
 
 
@@ -74,18 +77,19 @@ app.post('/googleAccess', function (req, res) {
  * 500: Internal Error
  */
 app.post('/cardAccess', function (req, res) {
-  connection.verifyCard(req.body.idCard).then(userInfo => {
-    if (userInfo) {
-      session.userInfo = userInfo;
-      res.status(200).send();
-    }
-    else {
-      res.status(200).send(JSON.stringify('User has no card'));
-    }
-  })
-  .catch(err => {
-    res.status(500).send(err);
-  });
+  connection.verifyCard(req.body.idCard)
+    .then(userInfo => {
+      if (userInfo) {
+        session.userInfo = userInfo;
+        res.status(200).send();
+      } 
+      else {
+        res.status(200).send(JSON.stringify('User has no card'));
+      }
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
 });
 
 
@@ -98,32 +102,35 @@ app.post('/cardAccess', function (req, res) {
  * 498: Token not valid
  */
 app.post('/registerCard', function (req, res) {
-  connection.verifyGoogleToken(req.body.idToken).then(payload => {
-    connection.registerCard(payload, req.body.idCard).then(userInfo => {
-      session.userInfo = userInfo;
-      session.authClient = authorization.setOAuth2Client();
-      authorization.hasTokens(session.userInfo['IdGoogle']).then(tokens => {
-        if (tokens) {
-          session.authClient.setCredentials(tokens);
-          res.status(200).send();
-        }
-        else {
-          let url = authorization.getAuthUrl(session.authClient);
-          url = url + '&login_hint=' + session.userInfo['IdGoogle'];
-          res.status(200).send(JSON.stringify(url));
-        }
-      })
-      .catch(err => {
-        res.status(500).send(err);
-      });
+  connection.verifyGoogleToken(req.body.idToken)
+    .then(payload => {
+      connection.registerCard(payload, req.body.idCard)
+        .then(userInfo => {
+          session.userInfo = userInfo;
+          session.authClient = authorization.setOAuth2Client();
+          authorization.hasTokens(session.userInfo['IdGoogle'])
+            .then(tokens => {
+              if (tokens) {
+                session.authClient.setCredentials(tokens);
+                res.status(200).send();
+              } 
+              else {
+                let url = authorization.getAuthUrl(session.authClient);
+                url = url + '&login_hint=' + session.userInfo['IdGoogle'];
+                res.status(200).send(JSON.stringify(url));
+              }
+            })
+            .catch(err => {
+              res.status(500).send(err);
+            });
+        })
+        .catch(err => {
+          res.status(500).send(err);
+        });
     })
     .catch(err => {
-      res.status(500).send(err);
+      res.status(498).send(err);
     });
-  })
-  .catch(err => {
-    res.status(498).send(err);
-  });
 });
 
 
@@ -135,18 +142,20 @@ app.post('/registerCard', function (req, res) {
  * 500: Internal Error
  */
 app.post('/code', function (req, res) {
-  authorization.getTokens(req.body.code).then(tokens => {
-    session.authClient.credentials = tokens;
-    authorization.storeTokens(session.userInfo['IdGoogle'], tokens['access_token'], tokens['refresh_token']).then(() => {
-      res.status(200).send();
+  authorization.getTokens(req.body.code)
+    .then(tokens => {
+      session.authClient.credentials = tokens;
+      authorization.storeTokens(session.userInfo['IdGoogle'], tokens['access_token'], tokens['refresh_token'])
+        .then(() => {
+          res.status(200).send();
+        })
+        .catch(err => {
+          res.status(500).send(err);
+        });
     })
     .catch(err => {
       res.status(500).send(err);
     });
-  })
-  .catch(err => {
-    res.status(500).send(err);
-  });
 });
 
 
@@ -157,21 +166,52 @@ app.post('/code', function (req, res) {
  * { 'IdGoogle':, 'LastName':, 'FirstName':, 'Email': }
  */
 app.get('/currentUser', function (req, res) {
-  if (session.userInfo) res.send(session.userInfo);
-  else res.status(500).send('User not set');
+  if (session.userInfo) {
+    res.send(session.userInfo);
+  } 
+  else { 
+    res.status(500).send('User not set');
+  }
 });
+
 
 /**
  * 
  */
 app.get('/userCalendar', function (req, res) {
-  calendars.getUserCalendar(session.authClient).then(events => {
-    res.send(events);
-  })
-  .catch(err => {
-    res.status(500).send(err);
-  })
+  if (req.query.timescale) {
+    calendars.getCalendar(session.authClient, req.query.timescale)
+      .then(events => {
+        console.log('ca part');
+        res.send(events);
+      })
+      .catch(err => {
+        res.status(500).send(err);
+      });
+  } 
+  else {
+    calendars.getCalendar(session.authClient)
+      .then(events => {
+        res.send(events);
+      })
+      .catch(err => {
+        res.status(500).send(err);
+      });
+  }
 });
 
+
+/**
+ * 
+ */
+app.get('/name', function (req, res) {
+  calendars.getName(req.query.email)
+    .then(name => {
+      res.send(name);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+})
 
 module.exports = app;

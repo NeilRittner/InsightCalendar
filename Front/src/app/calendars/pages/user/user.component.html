@@ -1,7 +1,17 @@
-<p>
-  First Name: {{ user.FirstName }}
-</p>
+<app-header [user] = 'user' (timeScaleChanged)='getCalendar($event)'></app-header>
 
-<p>
-  User Last Name: {{ user.LastName }}
-</p>
+<p> Events: </p>
+<ul>
+  <li *ngFor="let event of events">
+    Title: {{ event['summary'] }}
+    <br>
+    Organizer: {{ event['organizer']['name'] }}
+    <br>
+    Date: {{ event['date'] }}
+    <br>
+    Start-Time: {{ event['start']['dateTime'] }}
+    <br>
+    End-Time: {{ event['end']['dateTime'] }}
+    <br>
+  </li>
+</ul>
