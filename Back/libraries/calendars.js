@@ -19,7 +19,6 @@ module.exports = {
           .then(events => {
             eventsToSend['timescale'] = timeScale;
             eventsToSend['events'] = events;
-            console.log(JSON.stringify(eventsToSend));
             resolve(eventsToSend);
           })
           .catch(err => {
@@ -29,18 +28,18 @@ module.exports = {
     }
     else {
       return new Promise((resolve, reject) => {
-        times = this.getTimes('day');
+        times = this.getTimes('Day');
         this.getEvents(calendar, times)
           .then(eventsDay => {
             if (eventsDay.length < 3) {
-              times = this.getTimes('week');
+              times = this.getTimes('Week');
               this.getEvents(calendar, times)
                 .then(eventsWeek => {
                   if (eventsWeek.length < 2) {
-                    times = this.getTimes('month');
+                    times = this.getTimes('Month');
                     this.getEvents(calendar, times)
                       .then(eventsMonth => {
-                        eventsToSend['timescale'] = 'month';
+                        eventsToSend['timescale'] = 'Month';
                         eventsToSend['events'] = eventsMonth;
                         resolve(eventsToSend);
                       })
@@ -49,7 +48,7 @@ module.exports = {
                       });
                   }
                   else {
-                    eventsToSend['timescale'] = 'week';
+                    eventsToSend['timescale'] = 'Week';
                     eventsToSend['events'] = eventsWeek;
                     resolve(eventsToSend);
                   }
@@ -59,7 +58,7 @@ module.exports = {
                 });
             }
             else {
-              eventsToSend['timescale'] = 'day';
+              eventsToSend['timescale'] = 'Day';
               eventsToSend['events'] = eventsDay;
               resolve(eventsToSend);
             }
@@ -93,11 +92,11 @@ module.exports = {
   getTimes: function (newTimeScale) {
     const now = new Date();
     const times = {};
-    if (newTimeScale === 'day') {
+    if (newTimeScale === 'Day') {
       times['timeMin'] = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())).toISOString();
       times['timeMax'] = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)).toISOString();
     }
-    else if (newTimeScale === 'week') {
+    else if (newTimeScale === 'Week') {
       const day = now.getDate();
       const dayInWeek = now.getDay() - 1; // -1 to shift the 0 to monday.
       const lastDayOfWeek = 6 - dayInWeek;

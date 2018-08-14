@@ -166,10 +166,11 @@ app.post('/code', function (req, res) {
  * { 'IdGoogle':, 'LastName':, 'FirstName':, 'Email': }
  */
 app.get('/currentUser', function (req, res) {
-  if (session.userInfo) {
+  if (session.userInfo) { 
     res.send(session.userInfo);
   } 
   else { 
+    console.log('userInfo : ' + JSON.stringify(session.userInfo));
     res.status(500).send('User not set');
   }
 });
@@ -182,7 +183,6 @@ app.get('/userCalendar', function (req, res) {
   if (req.query.timescale) {
     calendars.getCalendar(session.authClient, req.query.timescale)
       .then(events => {
-        console.log('ca part');
         res.send(events);
       })
       .catch(err => {
