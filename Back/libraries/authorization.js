@@ -30,7 +30,7 @@ module.exports = {
   },
 
   hasTokens: function (userId) {
-    const query = `SELECT AccessToken, RefreshToken FROM users WHERE IdGoogle = ${ userId }`;
+    const query = `SELECT AccessToken, RefreshToken FROM users WHERE IdGoogle = ${userId}`;
 
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
@@ -42,9 +42,13 @@ module.exports = {
             };
             resolve(tokens);
           }
-          else resolve(null);
+          else {
+            resolve(null);
+          }
         } 
-        else reject(err);
+        else {
+          reject(err);
+        }
       });
     });
   },
@@ -69,19 +73,25 @@ module.exports = {
           };
           resolve(tokens);
         }
-        else reject(err);
+        else {
+          reject(err);
+        }
       });
     });
   },
 
   storeTokens: function (userId, accessToken, refreshToken) {
-    const query = `UPDATE users SET AccessToken = '${ accessToken }', RefreshToken = '${ refreshToken }'
-      WHERE IdGoogle = ${ userId }`;
+    const query = `UPDATE users SET AccessToken = '${accessToken}', RefreshToken = '${refreshToken}'
+      WHERE IdGoogle = ${userId}`;
 
     return new Promise ((resolve, reject) => {
       pool.calendar_pool.query(query, function (err) {
-        if (!err) resolve('row updated');
-        else reject(err);
+        if (!err) {
+          resolve('row updated');
+        }
+        else {
+          reject(err);
+        }
       });
     });
   }
