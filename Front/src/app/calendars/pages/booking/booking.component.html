@@ -1,1 +1,29 @@
 <app-header [user]='this.dataService.user'></app-header>
+
+<div class="container">
+  <h1>Create an event</h1>
+  <form>
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" class="form-control" [(ngModel)]="title" name="title" required>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <input type="text" class="form-control" #dp="bsDatepicker" bsDatepicker 
+          [(ngModel)]="startDate" name="startDate" 
+          [bsConfig]="{ dateInputFormat: 'MMMM D, YYYY', containerClass: 'theme-dark-blue' }" required>
+      </div>
+      <timepicker [(ngModel)]="startDate" name="startTime" [showSpinners]="hideSpinners"></timepicker>
+
+      <div class="form-group">
+        <input type="text" class="form-control" #dp="bsDatepicker" bsDatepicker 
+          [(ngModel)]="endDate" name="endDate" 
+          [bsConfig]="{ dateInputFormat: 'MMMM D, YYYY', containerClass: 'theme-dark-blue' }" required>
+      </div>
+      <timepicker [(ngModel)]="endDate" name="endDate" [showSpinners]="hideSpinners"></timepicker>
+    </div>
+
+    <button type="submit" (click)="createEvent()" class="btn btn-success">Submit</button>
+  </form>
+</div>
