@@ -55,14 +55,17 @@ app.post('/googleAccess', function (req, res) {
               }
             })
             .catch(err => {
+              // console.log(err);
               res.status(500).send(err);
             });
         })
         .catch(err => {
+          // console.log(err);
           res.status(500).send(err);
         });
     })
     .catch(err =>  {
+      // console.log(err);
       res.status(498).send(err);
     });
 });
@@ -88,6 +91,7 @@ app.post('/cardAccess', function (req, res) {
       }
     })
     .catch(err => {
+      // console.log(err);
       res.status(500).send(err);
     });
 });
@@ -121,14 +125,17 @@ app.post('/registerCard', function (req, res) {
               }
             })
             .catch(err => {
+              // console.log(err);
               res.status(500).send(err);
             });
         })
         .catch(err => {
+          // console.log(err);
           res.status(500).send(err);
         });
     })
     .catch(err => {
+      // console.log(err);
       res.status(498).send(err);
     });
 });
@@ -150,10 +157,12 @@ app.post('/code', function (req, res) {
           res.status(200).send();
         })
         .catch(err => {
+          // console.log(err);
           res.status(500).send(err);
         });
     })
     .catch(err => {
+      // console.log(err);
       res.status(500).send(err);
     });
 });
@@ -170,7 +179,6 @@ app.get('/currentUser', function (req, res) {
     res.send(session.userInfo);
   } 
   else { 
-    console.log('userInfo : ' + JSON.stringify(session.userInfo));
     res.status(500).send('User not set');
   }
 });
@@ -186,6 +194,7 @@ app.get('/userCalendar', function (req, res) {
         res.send(events);
       })
       .catch(err => {
+        // console.log(err);
         res.status(500).send(err);
       });
   } 
@@ -195,6 +204,7 @@ app.get('/userCalendar', function (req, res) {
         res.send(events);
       })
       .catch(err => {
+        // console.log(err);
         res.status(500).send(err);
       });
   }
@@ -210,8 +220,23 @@ app.get('/name', function (req, res) {
       res.send(name);
     })
     .catch(err => {
+      // console.log(err);
       res.status(500).send(err);
     });
-})
+});
+
+/**
+ * 
+ */
+app.post('/createEvent', function (req, res) {
+  calendars.createEvent(session.authClient, req.body)
+    .then(() => {
+      res.status(200).send();
+    })
+    .catch(err => {
+      // console.log(err);
+      res.status(500).send(err);
+    });
+});
 
 module.exports = app;

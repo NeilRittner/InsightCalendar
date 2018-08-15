@@ -71,7 +71,7 @@ module.exports = {
   },
 
   getEvents: function (calendar, times) {
-    return new Promise ((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       calendar.events.list({
         calendarId: 'primary',
         timeMin: times['timeMin'],
@@ -115,9 +115,83 @@ module.exports = {
 
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
-        if (!err) resolve(row[0]);
-        else reject(err);
+        if (!err) {
+          resolve(row[0]);
+        }
+        else {
+          reject(err);
+        }
       });
+    });
+  },
+
+  createEvent: function (auth, eventInfo) {
+    const calendar = google.calendar({ version: 'v3', auth });
+    const eventToInsert = {
+      'summary': eventInfo['title'],
+      // 'location': eventInfo['room'],
+      // 'description': eventInfo['description'],
+      'start': {
+        'dateTime': eventInfo['startDate']
+      },
+      'end': {
+        'dateTime': eventInfo['endDate']
+      },
+      'attendees': [],
+      'reminders': {
+        'useDefault': false,
+        'overrides': [
+          { 'method': 'email', 'minutes': 24 * 60 }
+        ]
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      const that = this;
+      calendar.events.insert({
+        auth: auth,
+        calendarId: 'primary',
+        resource: eventToInsert
+      }, function (err, event) {
+        if (err) {
+          console.log('There was an error contacting the Calendar service: ' + err);
+          reject (err);
+        }
+        else {
+          that.insertEventDB(event['data'])
+            .then(() => {
+              resolve('OK');
+            })
+            .catch(err => {
+              reject(err);
+            })
+        }
+      });
+    });
+  },
+
+  insertEventDB: function (eventInfo) {
+    return new Promise((resolve, reject) => {
+      this.getName(eventInfo['organizer']['email'])
+        .then(name => {
+          const start = eventInfo['start']['dateTime'].split("+")[0];
+          const end = eventInfo['end']['dateTime'].split("+")[0];
+          const query = `INSERT INTO reservations 
+          (idEventGoogleCalendar, OrganizerLastName, OrganizerFirstName, StartDate, EndDate)
+          VALUES ('${eventInfo['id']}', '${name['LastName']}', '${name['FirstName']}', '${start}', '${end}')`;
+
+          pool.calendar_pool.query(query, function (err) {
+            if (!err) {
+              resolve('Event inserted');
+            }
+            else {
+              reject(err);
+            }
+          });
+        })
+        .catch(err => {
+          reject(err)
+        });
     });
   }
 

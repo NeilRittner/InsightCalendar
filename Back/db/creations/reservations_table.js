@@ -19,8 +19,8 @@ con.connect(function (err) {
     IdEventGoogleCalendar varchar(255) primary key,
     OrganizerLastName varchar(255)not null,
     OrganizerFirstName varchar(255)not null,
-    Room varchar(255)not null,
-    Attendees text,
+    Room varchar(255) null,
+    Attendees text null,
     StartDate datetime not null,
     EndDate datetime not null
   )`;
