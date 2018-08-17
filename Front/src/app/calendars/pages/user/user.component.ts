@@ -20,15 +20,19 @@ export class UserComponent implements OnInit {
   timescale: string;
   events = [];
 
-  getUser(): void {
-    this.httpService.getUser()
-      .subscribe(user => {
-        // Do something else?
-        this.dataService.user = user;
-      }, (err: HttpErrorResponse) => {
+  getUser(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.httpService.getUser()
+        .subscribe(user => {
+          // Do something else?
+          this.dataService.user = user;
+          resolve('');
+        }, (err: HttpErrorResponse) => {
           // console.log(err['status']);
           // 500: Internal Error Component
-      });
+          // reject
+        });
+    });
   }
 
   extractDate(dateISOS: string): string {
@@ -40,13 +44,13 @@ export class UserComponent implements OnInit {
   }
 
   getCalendar(timeScale?: string) {
-    this.httpService.getCalendar(timeScale)
+    this.httpService.getCalendar(this.dataService.user['Email'], timeScale)
       .subscribe(events => {
         this.timescale = events['timescale'];
         this.dataService.userTimeScale = events['timescale'];
         this.events = events['events'];
         this.events.forEach(event => {
-          this.httpService.getName(event['organizer']['email']).subscribe(name => {
+          this.httpService.getNameFromEmail(event['organizer']['email']).subscribe(name => {
             event['organizer']['name'] = name['FirstName'] + ' ' + name['LastName'];
           }, (err: HttpErrorResponse) => {
             // Traiter l'erreur 500
@@ -63,13 +67,14 @@ export class UserComponent implements OnInit {
 
   ngOnInit() {
     if (JSON.stringify(this.dataService.user) === '{}') {
-      this.getUser();
-    }
-
-    if (this.dataService.userTimeScale) {
-      this.getCalendar(this.dataService.userTimeScale);
-    } else {
-      this.getCalendar();
+      this.getUser()
+        .then(() => {
+          if (this.dataService.userTimeScale) {
+            this.getCalendar(this.dataService.userTimeScale);
+          } else {
+            this.getCalendar();
+          }
+        });
     }
   }
 

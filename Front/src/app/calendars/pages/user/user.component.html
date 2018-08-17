@@ -5,14 +5,10 @@
 <ul>
   <li *ngFor="let event of events">
     Title: {{ event['summary'] }}
-    <br>
-    Organizer: {{ event['organizer']['name'] }}
-    <br>
-    Date: {{ event['date'] }}
-    <br>
-    Start-Time: {{ event['start']['dateTime'] }}
-    <br>
-    End-Time: {{ event['end']['dateTime'] }}
+    <br> Organizer: {{ event['organizer']['name'] }}
+    <br> Date: {{ event['date'] }}
+    <br> Start-Time: {{ event['start']['dateTime'] }}
+    <br> End-Time: {{ event['end']['dateTime'] }}
     <br>
   </li>
 </ul>
