@@ -13,6 +13,7 @@ const session = require('express-session');
 const connection = require('../libraries/connection');
 const authorization = require('../libraries/authorization');
 const calendars = require('../libraries/calendars');
+const util = require('../libraries/utilitaries');
 
 
 // Set the npm dependencies
@@ -189,7 +190,7 @@ app.get('/currentUser', function (req, res) {
  */
 app.get('/userCalendar', function (req, res) {
   if (req.query.timescale) {
-    calendars.getCalendar(session.authClient, req.query.timescale)
+    calendars.getCalendar(session.authClient, req.query.calendarId, req.query.timescale)
       .then(events => {
         res.send(events);
       })
@@ -199,7 +200,7 @@ app.get('/userCalendar', function (req, res) {
       });
   } 
   else {
-    calendars.getCalendar(session.authClient)
+    calendars.getCalendar(session.authClient, req.query.calendarId)
       .then(events => {
         res.send(events);
       })
@@ -214,8 +215,8 @@ app.get('/userCalendar', function (req, res) {
 /**
  * 
  */
-app.get('/name', function (req, res) {
-  calendars.getName(req.query.email)
+app.get('/nameFromEmail', function (req, res) {
+  util.getNameFromEmail(req.query.email)
     .then(name => {
       res.send(name);
     })
@@ -231,12 +232,43 @@ app.get('/name', function (req, res) {
 app.post('/createEvent', function (req, res) {
   calendars.createEvent(session.authClient, req.body)
     .then(() => {
+      console.log('oui');
       res.status(200).send();
+    })
+    .catch(err => {
+      console.log('non');
+      console.log(err);
+      res.status(500).send(err);
+    });
+});
+
+/**
+ * 
+ */
+app.get('/allRooms', function (req, res) {
+  util.getAllRoom()
+    .then(rooms => {
+      res.send(rooms);
     })
     .catch(err => {
       // console.log(err);
       res.status(500).send(err);
     });
 });
+
+
+/**
+ * 
+ */
+app.get('/allUsers', function (req,res) {
+  util.getAllUsers()
+    .then(users => {
+      res.send(users);
+    })
+    .catch(err => {
+      // console.log(err);
+      res.status(500).send(err);
+    });
+})
 
 module.exports = app;
