@@ -21,10 +21,10 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  getCalendar(timeScale): Observable<any> {
-    let url = `${environment.serveur_url}api/userCalendar`;
+  getCalendar(calendarId, timeScale): Observable<any> {
+    let url = `${environment.serveur_url}api/userCalendar?calendarId=${calendarId}`;
     if (timeScale) {
-      url = url + `?timescale=${timeScale}`;
+      url = url + `&timescale=${timeScale}`;
     }
     const httpOptions = { withCredentials: true };
     return this.http
@@ -32,32 +32,37 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  getName(email: string): Observable<any> {
-    const url = `${ environment.serveur_url }api/name?email=${email}`;
+  getNameFromEmail(email: string): Observable<any> {
+    const url = `${ environment.serveur_url }api/nameFromEmail?email=${email}`;
     const httpOptions = { withCredentials: true };
     return this.http
       .get(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
-  setNewTimeScale(newTimeScale: string): Observable<any> {
-    const url = `${environment.serveur_url}api/changeTimeScale?timescale=${newTimeScale}`;
-    const httpOptions = { withCredentials: true };
+  getAllRooms(): Observable<any> {
+    const url = `${environment.serveur_url}api/allRooms`;
+
     return this.http
-      .get(url, httpOptions)
+      .get(url)
       .pipe(catchError(err => throwError(err)));
   }
 
-  postEvent(title, startDate, endDate): Observable<any> {
+  getAllUsers(): Observable<any> {
+    const url = `${environment.serveur_url}api/allUsers`;
+
+    return this.http
+      .get(url)
+      .pipe(catchError(err => throwError(err)));
+  }
+
+  postEvent(event): Observable<any> {
     const url = `${environment.serveur_url}api/createEvent`;
-    const httpOptions = {
-      title: title,
-      startDate: startDate,
-      endDate: endDate,
-    };
+    const httpOptions = event;
     return this.http
       .post(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
+
 
 }
