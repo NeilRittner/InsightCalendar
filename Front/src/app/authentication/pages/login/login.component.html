@@ -1,19 +1,21 @@
-<p>
-  Welcome on the connection page
-</p>
-
-<button (click)="signinWithGoogle()"> Sign in with Google </button>
-
-<div>
-  <br>
-  <form>
-    <div>
-      <label for="name"> Scan your card </label>
-      <input type="password" class="form-control" id="cardForm" [(ngModel)]="idCard" name="card" required autofocus>
-    </div>
-    <button (click)="signinWithCard()"></button>
-  </form>
-  <br>
+<div class="container">
+  <p>
+    Welcome on the connection page
+  </p>
+  
+  <button (click)="signinWithGoogle()"> Sign in with Google </button>
+  
+  <div>
+    <br>
+    <form>
+      <div>
+        <label for="name"> Scan your card </label>
+        <input type="password" class="form-control" id="cardForm" [(ngModel)]="idCard" name="card" required autofocus>
+      </div>
+      <button (click)="signinWithCard()" hidden></button>
+    </form>
+    <br>
+  </div>
+  
+  <button (click)="register()"> Register your card </button>
 </div>
-
-<button (click)="register()"> Register your card </button>
