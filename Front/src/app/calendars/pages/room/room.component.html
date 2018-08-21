@@ -1,4 +1,4 @@
-<app-header [user]='this.dataService.user' [timeScale]='timescale' 
+<app-header [user]="this.dataService.user" [timeScale]="timescale" [occupancy]="occupancy"
 (timeScaleChanged)="getCalendar(this.selectedRoom['Email'], $event)">
 </app-header>
 
@@ -13,8 +13,16 @@
         </mat-option>
       </mat-autocomplete>
     </mat-form-field>
-    <fa-icon [icon]="faTimes" (click)="clearRoom()"></fa-icon>
+    <fa-icon class="cursor" [icon]="faTimes" (click)="clearRoom()"></fa-icon>
   </div>
+
+  <form *ngIf="selectedRoom">
+    <div>
+      <label for="name"> Scan your card </label>
+      <input type="password" class="form-control" [formControl]="idCardControl" autofocus>
+    </div>
+    <button (click)="setUserPosition(idCardControl.value)" hidden></button>
+  </form>
   
   <div *ngIf="events.length > 0">
     <p> Events: </p>

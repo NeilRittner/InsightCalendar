@@ -24,6 +24,10 @@ export class RoomComponent implements OnInit {
   timescale: string;
   events = [];
 
+  idCardControl = new FormControl();
+
+  occupancy: number;
+
   roomsControl = new FormControl(); // FormControl for room
   roomsAutocomplete = []; // Autocomplete of rooms
   filteredRooms: Observable<any>; // List of rooms filtered according to box content
@@ -70,6 +74,7 @@ export class RoomComponent implements OnInit {
     return formatDate(dateISOS, 'fullDate', 'en-US');
   }
 
+
   extractTime(dateISOS: string): string {
     return formatDate(dateISOS, 'mediumTime', 'en-US');
   }
@@ -105,6 +110,7 @@ export class RoomComponent implements OnInit {
 
   setRoom(room): void {
     this.selectedRoom = room;
+    this.getOccupancy(this.selectedRoom['Name']);
     this.getCalendar(this.selectedRoom['Email']);
   }
 
@@ -112,7 +118,36 @@ export class RoomComponent implements OnInit {
   clearRoom(): void {
     this.events = [];
     this.timescale = '';
+    this.selectedRoom = null;
     this.roomsControl.reset();
+  }
+
+
+  setUserPosition(): void {
+    console.log('Room : ' + this.selectedRoom['Name']);
+    this.httpService.postUserPosition(this.idCardControl.value, this.selectedRoom['Name'])
+      .subscribe(move => {
+        if (move === 'in') {
+          this.occupancy = this.occupancy + 1;
+        } else {
+          this.occupancy = this.occupancy - 1;
+        }
+      }, (err: HttpErrorResponse) => {
+        console.log(err);
+        // 500: Internal Error Component
+      });
+    this.idCardControl.reset();
+  }
+
+
+  getOccupancy(roomName): void {
+    this.httpService.getRoomOccupancy(roomName)
+      .subscribe(occupancy => {
+        this.occupancy = occupancy['Occupancy'];
+      }, (err: HttpErrorResponse) => {
+        // console.log(err['status']);
+        // 500: Internal Error Component
+      });
   }
 
 
