@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { text } from '@angular/core/src/render3/instructions';
 
 @Injectable({
   providedIn: 'root'
@@ -64,5 +65,22 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
+  postUserPosition(userIdCard, roomName): Observable<any> {
+    const url = `${environment.serveur_url}api/updatePosition`;
+    const httpOptions = {
+      userIdCard: userIdCard,
+      roomName: roomName,
+    };
+    return this.http
+      .post(url, httpOptions, { responseType: 'text' })
+      .pipe(catchError(err => throwError(err)));
+  }
+
+  getRoomOccupancy(roomName): Observable<any> {
+    const url = `${environment.serveur_url}api/roomOccupancy?roomName=${roomName}`;
+    return this.http
+      .get(url)
+      .pipe(catchError(err => throwError(err)));
+  }
 
 }

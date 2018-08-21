@@ -75,7 +75,14 @@ export class UserComponent implements OnInit {
             this.getCalendar();
           }
         });
+    } else {
+      if (this.dataService.userTimeScale) {
+        this.getCalendar(this.dataService.userTimeScale);
+      } else {
+        this.getCalendar();
+      }
     }
+
   }
 
 }
