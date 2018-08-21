@@ -34,7 +34,7 @@
           </mat-option>
         </mat-autocomplete>
       </mat-form-field>
-      <fa-icon [icon]="faTimes" (click)="clearRoom()"></fa-icon>
+      <fa-icon class="cursor" [icon]="faTimes" (click)="clearRoom()"></fa-icon>
     </div>
 
     <div>
@@ -52,7 +52,7 @@
       <p>Participants</p>
       <p *ngFor="let att of attendeesList">
         {{ att['FirstName'] }} {{ att['LastName']}} : {{ att['Email']}}
-        <fa-icon [icon]="faTimes" (click)="removeAttendee(att)"></fa-icon>
+        <fa-icon class="cursor" [icon]="faTimes" (click)="removeAttendee(att)"></fa-icon>
       </p>
     </div>
 
