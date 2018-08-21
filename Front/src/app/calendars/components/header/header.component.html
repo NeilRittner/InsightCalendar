@@ -23,15 +23,19 @@
       </li>
     </ul>
 
-    <div *ngIf="router.url !== '/booking'" class="nav-item dropdown">
-      <a class="nav-link dropdown-toggle" id="navbardrop" data-toggle="dropdown">
+    <div *ngIf="router.url !== '/booking' && timeScale" class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle cursor" id="navbardrop" data-toggle="dropdown">
         {{timeScale}}
       </a>
       <div class="dropdown-menu">
-        <button class="dropdown-item" (click)="changeTimeScale('Day')">Day</button>
-        <button class="dropdown-item" (click)="changeTimeScale('Week')">Week</button>
-        <button class="dropdown-item" (click)="changeTimeScale('Month')">Month</button>
+        <button class="dropdown-item cursor" (click)="changeTimeScale('Day')">Day</button>
+        <button class="dropdown-item cursor" (click)="changeTimeScale('Week')">Week</button>
+        <button class="dropdown-item cursor" (click)="changeTimeScale('Month')">Month</button>
       </div>
+    </div>
+
+    <div *ngIf="timeScale && router.url === '/room'" class="nav-item">
+      <span>Occupancy: {{ occupancy }}</span>
     </div>
 
     <form class="form-inline">

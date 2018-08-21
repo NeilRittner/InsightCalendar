@@ -14,6 +14,7 @@ export class HeaderComponent implements OnInit {
 
   @Input() user;
   @Input() timeScale: string;
+  @Input() occupancy: number;
   @Output() timeScaleChanged: EventEmitter<string> = new EventEmitter();
 
   changeTimeScale(newTimeScale: string): void {
