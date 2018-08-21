@@ -14,6 +14,7 @@ const connection = require('../libraries/connection');
 const authorization = require('../libraries/authorization');
 const calendars = require('../libraries/calendars');
 const util = require('../libraries/utilitaries');
+const position = require('../libraries/position');
 
 
 // Set the npm dependencies
@@ -56,17 +57,14 @@ app.post('/googleAccess', function (req, res) {
               }
             })
             .catch(err => {
-              // console.log(err);
               res.status(500).send(err);
             });
         })
         .catch(err => {
-          // console.log(err);
           res.status(500).send(err);
         });
     })
     .catch(err =>  {
-      // console.log(err);
       res.status(498).send(err);
     });
 });
@@ -92,7 +90,6 @@ app.post('/cardAccess', function (req, res) {
       }
     })
     .catch(err => {
-      // console.log(err);
       res.status(500).send(err);
     });
 });
@@ -126,17 +123,14 @@ app.post('/registerCard', function (req, res) {
               }
             })
             .catch(err => {
-              // console.log(err);
               res.status(500).send(err);
             });
         })
         .catch(err => {
-          // console.log(err);
           res.status(500).send(err);
         });
     })
     .catch(err => {
-      // console.log(err);
       res.status(498).send(err);
     });
 });
@@ -195,7 +189,6 @@ app.get('/userCalendar', function (req, res) {
         res.send(events);
       })
       .catch(err => {
-        // console.log(err);
         res.status(500).send(err);
       });
   } 
@@ -205,7 +198,6 @@ app.get('/userCalendar', function (req, res) {
         res.send(events);
       })
       .catch(err => {
-        // console.log(err);
         res.status(500).send(err);
       });
   }
@@ -221,10 +213,10 @@ app.get('/nameFromEmail', function (req, res) {
       res.send(name);
     })
     .catch(err => {
-      // console.log(err);
       res.status(500).send(err);
     });
 });
+
 
 /**
  * 
@@ -232,15 +224,13 @@ app.get('/nameFromEmail', function (req, res) {
 app.post('/createEvent', function (req, res) {
   calendars.createEvent(session.authClient, req.body)
     .then(() => {
-      console.log('oui');
       res.status(200).send();
     })
     .catch(err => {
-      console.log('non');
-      console.log(err);
       res.status(500).send(err);
     });
 });
+
 
 /**
  * 
@@ -251,7 +241,6 @@ app.get('/allRooms', function (req, res) {
       res.send(rooms);
     })
     .catch(err => {
-      // console.log(err);
       res.status(500).send(err);
     });
 });
@@ -260,13 +249,46 @@ app.get('/allRooms', function (req, res) {
 /**
  * 
  */
-app.get('/allUsers', function (req,res) {
+app.get('/allUsers', function (req, res) {
   util.getAllUsers()
     .then(users => {
       res.send(users);
     })
     .catch(err => {
-      // console.log(err);
+      res.status(500).send(err);
+    });
+});
+
+
+/**
+ * 
+ */
+app.post('/updatePosition', function (req, res) {
+  position.getMove(req.body.userIdCard, req.body.roomName)
+    .then(move => {
+      position.updatePositionAndOccupancy(req.body.userIdCard, req.body.roomName, move)
+        .then(() => {
+          res.send(move);
+        })
+        .catch(err => {
+          res.status(500).send(err);
+        });
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+});
+
+
+/**
+ * 
+ */
+app.get('/roomOccupancy', function (req, res) {
+  position.getRoomOccupancy(req.query.roomName)
+    .then(occupancy => {
+      res.status(200).send(occupancy);
+    })
+    .catch(err => {
       res.status(500).send(err);
     });
 })
