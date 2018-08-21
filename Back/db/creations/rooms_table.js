@@ -15,12 +15,13 @@ const con = mysql.createConnection({
 con.connect(function (err) {
   if (err) throw err;
 
-  const sql = `CREATE TABLE if not exists rooms(
+  const query = `CREATE TABLE if not exists rooms(
     Name varchar(255) primary key,
+    Occupancy int default 0,
     Email varchar(255)
   )`;
 
-  con.query(sql, function (err, results, fields) {
+  con.query(query, function (err, results, fields) {
     if (err) {
       console.log(err.message);
     }

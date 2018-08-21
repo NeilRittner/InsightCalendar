@@ -15,15 +15,15 @@ const con = mysql.createConnection({
 con.connect(function (err) {
   if (err) throw err;
 
-  const sql = `INSERT INTO rooms (Name, Email) Values ?`;
+  const query = `INSERT INTO rooms (Name, Occupancy, Email) Values ?`;
   const rooms = [
-    ['NUIG Main Conference Room', 'insight-centre.org_2d39373934373831323432@resource.calendar.google.com'],
-    ['NUIG Meeting Room A', 'insight-centre.org_313937393337323334@resource.calendar.google.com'],
-    ['NUIG Meeting Room B', 'insight-centre.org_2d3837383937383331363735@resource.calendar.google.com'],
-    ['NUIG Meeting Room C', 'insight-centre.org_2d3837363733353432343233@resource.calendar.google.com'],
+    ['NUIG Main Conference Room', '0', 'insight-centre.org_2d39373934373831323432@resource.calendar.google.com'],
+    ['NUIG Meeting Room A', '0', 'insight-centre.org_313937393337323334@resource.calendar.google.com'],
+    ['NUIG Meeting Room B', '0', 'insight-centre.org_2d3837383937383331363735@resource.calendar.google.com'],
+    ['NUIG Meeting Room C', '0', 'insight-centre.org_2d3837363733353432343233@resource.calendar.google.com'],
   ]
 
-  con.query(sql, [rooms], function (err, results, fields) {
+  con.query(query, [rooms], function (err, results, fields) {
     if (err) {
       console.log(err.message);
     }

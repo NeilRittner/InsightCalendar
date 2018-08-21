@@ -15,7 +15,7 @@ const con = mysql.createConnection({
 con.connect(function (err) {
   if (err) throw err;
   
-  const sql = `CREATE TABLE if not exists users(
+  const query = `CREATE TABLE if not exists users(
     IdGoogle varchar(255) primary key,
     LastName varchar(255)not null,
     FirstName varchar(255)not null,
@@ -24,10 +24,10 @@ con.connect(function (err) {
     AccessToken varchar(255),
     RefreshToken varchar(255),
     Status int not null default 1,
-    LastScanPosition varchar(255)
+    Position varchar(255)
   )`;
 
-  con.query(sql, function (err, results, fields) {
+  con.query(query, function (err, results, fields) {
     if (err) {
       console.log(err.message);
     }

@@ -14,9 +14,9 @@ const con = mysql.createConnection({
 con.connect(function (err) {
   if (err) throw err;
 
-  const sql = `CREATE DATABASE calendar`;
+  const query = `CREATE DATABASE calendar`;
 
-  con.query(sql, function (err, result) {
+  con.query(query, function (err, result) {
     if (err) throw err;
     console.log("Database 'calendar' created");
   });

@@ -15,7 +15,7 @@ const con = mysql.createConnection({
 con.connect(function (err) {
   if (err) throw err;
   
-  const sql = `CREATE TABLE if not exists reservations(
+  const query = `CREATE TABLE if not exists reservations(
     IdEventGoogleCalendar varchar(255) primary key,
     OrganizerLastName varchar(255)not null,
     OrganizerFirstName varchar(255)not null,
@@ -25,7 +25,7 @@ con.connect(function (err) {
     EndDate datetime not null
   )`;
 
-  con.query(sql, function (err, results, fields) {
+  con.query(query, function (err, results, fields) {
     if (err) console.log(err.message);
   });
 
