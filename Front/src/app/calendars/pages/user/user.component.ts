@@ -40,7 +40,7 @@ export class UserComponent implements OnInit {
   }
 
   extractTime(dateISOS: string): string {
-    return formatDate(dateISOS, 'mediumTime', 'en-US');
+    return formatDate(dateISOS, 'shortTime', 'en-US');
   }
 
   getCalendar(timeScale?: string) {
@@ -51,7 +51,11 @@ export class UserComponent implements OnInit {
         this.events = events['events'];
         this.events.forEach(event => {
           this.httpService.getNameFromEmail(event['organizer']['email']).subscribe(name => {
-            event['organizer']['name'] = name['FirstName'] + ' ' + name['LastName'];
+            if (name) {
+              event['organizer']['name'] = name['FirstName'] + ' ' + name['LastName'];
+            } else {
+              event['organizer']['name'] = null;
+            }
           }, (err: HttpErrorResponse) => {
             // Traiter l'erreur 500
           });

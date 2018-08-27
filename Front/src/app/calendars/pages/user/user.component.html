@@ -1,14 +1,5 @@
 <app-header [user]='this.dataService.user' [timeScale]='timescale' (timeScaleChanged)='getCalendar($event)'>
 </app-header>
 
-<p> Events: </p>
-<ul>
-  <li *ngFor="let event of events">
-    Title: {{ event['summary'] }}
-    <br> Organizer: {{ event['organizer']['name'] }}
-    <br> Date: {{ event['date'] }}
-    <br> Start-Time: {{ event['start']['dateTime'] }}
-    <br> End-Time: {{ event['end']['dateTime'] }}
-    <br>
-  </li>
-</ul>
+<app-calendar [timeScale]='this.dataService.userTimeScale' [events]='events'>
+</app-calendar>
