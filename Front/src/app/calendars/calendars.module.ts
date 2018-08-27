@@ -8,11 +8,14 @@ import { TimepickerModule } from 'ngx-bootstrap/timepicker';
 import { MatFormFieldModule, MatInputModule, MatAutocompleteModule } from '@angular/material';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { ProgressbarModule } from 'ngx-bootstrap/progressbar';
 
 import { UserComponent } from './pages/user/user.component';
 import { RoomComponent } from './pages/room/room.component';
 import { BookingComponent } from './pages/booking/booking.component';
 import { HeaderComponent } from './components/header/header.component';
+import { CalendarComponent } from './components/calendar/calendar.component';
 
 import { CalendarsService } from './shared/httpService/calendars.service';
 import { DataService } from './shared/dataService/data.service';
@@ -33,13 +36,16 @@ import { routing } from './calendars-routing.module';
     MatFormFieldModule,
     MatInputModule,
     MatAutocompleteModule,
-    FontAwesomeModule
+    FontAwesomeModule,
+    MatGridListModule,
+    ProgressbarModule.forRoot()
   ],
   declarations: [
     UserComponent,
     RoomComponent,
     BookingComponent,
-    HeaderComponent
+    HeaderComponent,
+    CalendarComponent
   ],
   providers: [
     CalendarsService,

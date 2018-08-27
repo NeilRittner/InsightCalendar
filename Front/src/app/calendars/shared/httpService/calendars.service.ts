@@ -83,4 +83,28 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
+  cancelEvent(organizerEmail, eventId): Observable<any> {
+    const url = `${environment.serveur_url}api/cancelEvent`;
+    const httpOptions = {
+      organizerEmail: organizerEmail,
+      eventId: eventId
+    };
+
+    return this.http
+      .post(url, httpOptions)
+      .pipe(catchError(err => throwError(err)));
+  }
+
+  verifyOccupancy(roomToVerify, eventToVerify): Observable<any> {
+    const url = `${environment.serveur_url}api/cancelEvent`;
+    const httpOptions = {
+      roomToVerify: roomToVerify,
+      eventToVerify: eventToVerify
+    };
+
+    return this.http
+      .post(url, httpOptions, { responseType: 'text' })
+      .pipe(catchError(err => throwError(err)));
+  }
+
 }
