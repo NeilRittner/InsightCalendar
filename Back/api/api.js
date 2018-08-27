@@ -22,7 +22,8 @@ app.use(cors({ credentials: true, origin: process.env.ORIGIN }));
 app.use(session({
   secret: process.env.SECRET,
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: true,
+  cookie: {}
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -291,6 +292,36 @@ app.get('/roomOccupancy', function (req, res) {
     .catch(err => {
       res.status(500).send(err);
     });
-})
+});
 
+
+/** 
+ * 
+ */
+app.post('/cancelEvent', function (req, res) {
+  console.log('sessionUser : ' + session.authClient);
+  calendars.cancelEvent(session.authClient, req.body.organizerEmail, req.body.eventId)
+    .then(() => {
+      console.log('2');
+      res.status(200).send();
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(500).send(err);
+    });
+});
+
+
+/** 
+ * 
+ */
+app.post('/verifyOccupancy', function (req, res) {
+  calendars.verifyOccupancy(req.body.roomToVerify, req.body.eventToVerify)
+    .then(response => {
+      res.status(200).send(response);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+});
 module.exports = app;

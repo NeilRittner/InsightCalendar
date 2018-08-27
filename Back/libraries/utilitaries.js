@@ -53,7 +53,22 @@ module.exports = {
   },
 
   getUserPosition: function (userIdCard) {
-    const query = `SELECT Position FROM users WHERE IdCard = ${userIdCard}`
+    const query = `SELECT Position FROM users WHERE IdCard = ${userIdCard}`;
+
+    return new Promise((resolve, reject) => {
+      pool.calendar_pool.query(query, function (err, row) {
+        if (!err) {
+          resolve(row[0]['Position']);
+        }
+        else {
+          reject(err);
+        }
+      });
+    });
+  },
+
+  getUserPositionFromEmail: function (userEmail) {
+    const query = `SELECT Position FROM users WHERE Email = ${userEmail}`;
 
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {

@@ -117,7 +117,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       const that = this;
       calendar.events.insert({
-        auth: auth,
+        // auth: auth,
         calendarId: 'primary',
         resource: this.structureEvent(eventInfo)
       }, function (err, event) {
@@ -188,6 +188,43 @@ module.exports = {
         .catch(err => {
           reject(err)
         });
+    });
+  },
+
+  cancelEvent: function (auth, organizerEmail, eventId) {
+    const calendar = google.calendar({ version: 'v3', auth });
+    return new Promise((resolve, reject) => {
+      calendar.events.delete({
+        calendarId: organizerEmail,
+        eventId: eventId
+      }, function (err) {
+        if (err) {
+          reject(err);
+        }
+        else {
+          resolve('');
+        }
+      });
+    });
+  },
+
+  verifyOccupancy: function (roomToVerify, eventToVerify) {
+    return new Promise((resolve, reject) => {
+      for (let i = 0; i < eventToVerify['attendees'].length; i++) {
+        const attendee = array[i];
+        if (!attendee['resource'] && attendee['responseStatus'] === 'accepted') {
+          util.getUserPositionFromEmail(attendee['email'])
+            .then(position => {
+              if (position === roomToVerify) {
+                resolve('yes');
+              }
+            })
+            .catch(err => {
+              reject(err);
+            });
+        }
+      }
+      resolve('no');
     });
   }
 
