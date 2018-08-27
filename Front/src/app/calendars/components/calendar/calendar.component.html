@@ -1,0 +1,42 @@
+<div class="container">
+  <table *ngIf="timeScale === 'Day'" style="width:100%">
+    <tr>
+      <th style="width:10%"> </th>
+      <th class="hour" *ngFor="let hour of hours"> {{ hour }} </th>
+    </tr>
+    <tr>
+      <td style="width:10%"> {{ weekDays[indexDay] }} </td>
+      <td colspan="9">
+        <progressbar class="progress" [value]="days[indexDay]" max="100"></progressbar>
+      </td>
+    </tr>
+  </table>
+
+  <table *ngIf="timeScale === 'Week'" style="width:100%">
+    <tr>
+      <th style="width:10%"> </th>
+      <th class="hour" *ngFor="let hour of hours"> {{ hour }} </th>
+    </tr>
+    <tr *ngFor="let day of days; let i=index">
+      <td style="width:10%"> {{ weekDays[i] }} </td>
+      <td colspan="9">
+        <progressbar class="progress" [value]="day" max="100"></progressbar>
+      </td>
+    </tr>
+  </table>
+
+  <table *ngIf="timeScale === 'Month'" style="width:100%">
+    <tr>
+      <th class="day" *ngFor="let day of weekDays"> {{ day }} </th>
+    </tr>
+    <tr *ngFor="let week of monthDays; let i=index">
+      <td class="monthTd" *ngFor="let day of monthDays[i]; let j=index">
+        <p> {{ daysNumber[i][j] }}</p>
+        <p *ngFor="let event of monthDays[i][j]">
+          <span class="time"> {{ event['start']['dateTime'] }} - {{ event['end']['dateTime'] }} </span>
+          <span class="title"> {{ event['summary'] }} </span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</div>
