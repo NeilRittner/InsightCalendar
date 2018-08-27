@@ -3,38 +3,29 @@
 </app-header>
 
 <div class="container">
-  <div>
-    <mat-form-field>
-      <input type="text" placeholder="Choose a room" aria-label="Number" matInput [formControl]="roomsControl" 
-      [matAutocomplete]="autoRoom">
-      <mat-autocomplete #autoRoom="matAutocomplete">
-        <mat-option *ngFor="let room of filteredRooms | async" [value]="room['Name']" (click)="setRoom(room)">
-          {{ room['Name'] }}
-        </mat-option>
-      </mat-autocomplete>
-    </mat-form-field>
-    <fa-icon class="cursor" [icon]="faTimes" (click)="clearRoom()"></fa-icon>
-  </div>
-
-  <form *ngIf="selectedRoom">
+  <div class="row">
     <div>
-      <label for="name"> Scan your card </label>
-      <input type="password" class="form-control" [formControl]="idCardControl" autofocus>
+      <mat-form-field>
+        <input type="text" placeholder="Choose a room" aria-label="Number" matInput [formControl]="roomsControl" [matAutocomplete]="autoRoom">
+        <mat-autocomplete #autoRoom="matAutocomplete">
+          <mat-option *ngFor="let room of filteredRooms | async" [value]="room['Name']" (click)="setRoom(room)">
+            {{ room['Name'] }}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+      <fa-icon class="cursor" [icon]="faTimes" (click)="clearRoom()"></fa-icon>
     </div>
-    <button (click)="setUserPosition(idCardControl.value)" hidden></button>
-  </form>
+
+    <form *ngIf="selectedRoom">
+      <div>
+        <input type="password" class="form-control" [formControl]="idCardControl" autofocus>
+      </div>
+      <button (click)="setUserPosition(idCardControl.value)" hidden></button>
+    </form>
+  </div>
   
   <div *ngIf="events.length > 0">
-    <p> Events: </p>
-    <ul>
-      <li *ngFor="let event of events">
-        Title: {{ event['summary'] }}
-        <br> Organizer: {{ event['organizer']['name'] }}
-        <br> Date: {{ event['date'] }}
-        <br> Start-Time: {{ event['start']['dateTime'] }}
-        <br> End-Time: {{ event['end']['dateTime'] }}
-        <br>
-      </li>
-    </ul>
+    <app-calendar [timeScale]='timescale' [events]='events'>
+    </app-calendar>
   </div>
 </div>
