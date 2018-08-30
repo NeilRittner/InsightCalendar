@@ -15,33 +15,37 @@ export class AuthenticationService {
 
   postGoogleToken(token: string): Observable<any> {
     const url = `${environment.serveur_url}api/googleAccess`;
-    const httpOptions = { withCredentials: true, idToken: token };
+    const httpBody = { idToken: token };
+    const httpOptions = { withCredentials: true };
     return this.http
-      .post(url, httpOptions)
+      .post(url, httpBody, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
   postCardId(idCard: string) {
     const url = `${environment.serveur_url}api/cardAccess`;
-    const httpOptions = { withCredentials: true, idCard: idCard, observe: 'response' };
+    const httpBody = { idCard: idCard, observe: 'response' };
+    const httpOptions = { withCredentials: true };
     return this.http
-      .post(url, httpOptions)
+      .post(url, httpOptions, { withCredentials: true })
       .pipe(catchError(err => throwError(err)));
   }
 
   postRegisterCard(token: string, idCard: string) {
     const url = `${environment.serveur_url}api/registerCard`;
-    const httpOptions = { withCredentials: true, idToken: token, idCard: idCard, observe: 'response' };
+    const httpBody = { idToken: token, idCard: idCard };
+    const httpOptions = { withCredentials: true };
     return this.http
-      .post(url, httpOptions)
+      .post(url, httpBody, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
   postCode(code: string) {
     const url = `${environment.serveur_url}api/code`;
-    const httpOptions = { withCredentials: true, code: code, observe: 'response' };
+    const httpBody = { code: code };
+    const httpOptions = { withCredentials: true };
     return this.http
-      .post(url, httpOptions)
+      .post(url, httpBody, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 }
