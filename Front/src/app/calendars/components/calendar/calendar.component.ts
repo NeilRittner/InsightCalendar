@@ -25,6 +25,10 @@ export class CalendarComponent implements OnInit, OnChanges {
       this.days = [[], [], [], [], []];
       let exEventLongDate: Date;
 
+      if (this.timeScale === 'Day') {
+        this.indexDay = new Date().getDay() - 1;
+      }
+
       for (let i = 0; i < this.events.length; i++) {
         const event = this.events[i];
         const eventLongDate = new Date(event['date']);
@@ -35,10 +39,6 @@ export class CalendarComponent implements OnInit, OnChanges {
         endTimes[0] = this.adaptTime(endTimes[0], endTimes[1].split(' ')[1]);
         startTimes[1] = parseInt(startTimes[1].split(' ')[0], 10);
         endTimes[1] = parseInt(endTimes[1].split(' ')[0], 10);
-
-        if (this.timeScale === 'Day') {
-          this.indexDay = indexInDays;
-        }
 
         /* ValueEvent */
         let valueEvent = this.calculValueEvent(startTimes[0], endTimes[0], startTimes[1], endTimes[1]);
@@ -74,9 +74,7 @@ export class CalendarComponent implements OnInit, OnChanges {
           }
         }
       }
-      if (this.timeScale === 'Week') {
-        this.completeEmptyDays();
-      }
+      this.completeEmptyDays();
     } else {
       this.monthDays = [];
       this.daysNumber = [];
