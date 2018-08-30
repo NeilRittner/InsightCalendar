@@ -211,9 +211,34 @@ module.exports = {
           reject(err);
         }
         else {
-          that.getCalendar(auth, roomEmail)
+          that.getCalendar(auth, roomEmail, 'Day')
             .then(events => {
-              resolve(events);
+              events['events'] = that.removeEventInList(events['events'], eventId);
+              if (events['events'].length === 0) {
+                that.getCalendar(auth, roomEmail, 'Week')
+                  .then(events2 => {
+                    events2['events'] = that.removeEventInList(events2['events'], eventId);
+                    if (events2['events'].length === 0) {
+                      that.getCalendar(auth, roomEmail, 'Month')
+                        .then(events3 => {
+                          events3['events'] = that.removeEventInList(events3['events'], eventId);
+                          resolve(events3);
+                        })
+                        .catch(err => {
+                          reject(err)
+                        });
+                    }
+                    else {
+                      resolve(events);
+                    }
+                  })
+                  .catch(err => {
+                    reject(err)
+                  });
+              }
+              else {
+                resolve(events);
+              }
             })
             .catch(err => {
               reject(err)
@@ -221,6 +246,19 @@ module.exports = {
         }
       });
     });
+  },
+
+  removeEventInList: function (events, eventId) {
+    let index = -1;
+    for (let i = 0; i < events.length; i++) {
+      if (events[i]['id'] === eventId) {
+        index = i;
+      }
+    }
+    if (index !== -1) {
+      events = (events.slice(0, index)).concat(events.slice(index + 1));
+    }
+    return events;
   },
 
   verifyOccupancy: function (roomToVerify, eventToVerify) {

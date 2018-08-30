@@ -94,6 +94,7 @@ export class RoomComponent implements OnInit {
   getCalendar(calendarId, timeScale?: string): void {
     this.httpService.getCalendar(calendarId, timeScale)
       .subscribe(events => {
+        console.log(events);
         this.calendarTreatments(events);
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);
@@ -114,12 +115,11 @@ export class RoomComponent implements OnInit {
 
       const now = new Date();
       const startTimeArr = event['start']['dateTime'].split(':');
-      const startTimeH = this.convert12To24(event['start']['dateTime'], startTimeArr[1].split(' ')[1]).toString();
+      const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
       const nowBisTime = now.getTime() - this.timeBeforeRemove * 60 * 1000;
       const dateArr = event['date'].split(', ');
       const startBisTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
         dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
-
       if (nowBisTime <= startBisTime && this.nextEvent.length === 0) {
         this.nextEvent = event;
         if (now.getTime() >= startBisTime) {
@@ -231,10 +231,17 @@ export class RoomComponent implements OnInit {
               index = i;
             }
           }
+
           if (index !== -1) {
             events['events'] = (events['events'].slice(0, index)).concat(events['events'].slice(index + 1));
           }
-          this.calendarTreatments(events);
+          console.log(events['events'].length);
+          if (events['events'].length === 0) {
+            console.log('ici');
+            this.getCalendar(roomEmail);
+          } else {
+            this.calendarTreatments(events);
+          }
         }
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);
