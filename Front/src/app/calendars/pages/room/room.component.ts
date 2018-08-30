@@ -225,23 +225,7 @@ export class RoomComponent implements OnInit {
     this.httpService.cancelEvent(eventToCancel['organizer']['email'], eventToCancel['id'], roomEmail)
       .subscribe(events => {
         if (this.selectedRoom) {
-          let index = -1;
-          for (let i = 0; i < events['events'].length; i++) {
-            if (events['events'][i]['id'] === eventToCancel['id']) {
-              index = i;
-            }
-          }
-
-          if (index !== -1) {
-            events['events'] = (events['events'].slice(0, index)).concat(events['events'].slice(index + 1));
-          }
-          console.log(events['events'].length);
-          if (events['events'].length === 0) {
-            console.log('ici');
-            this.getCalendar(roomEmail);
-          } else {
-            this.calendarTreatments(events);
-          }
+          this.calendarTreatments(events);
         }
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);

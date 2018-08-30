@@ -229,7 +229,7 @@ module.exports = {
                         });
                     }
                     else {
-                      resolve(events);
+                      resolve(events2);
                     }
                   })
                   .catch(err => {
