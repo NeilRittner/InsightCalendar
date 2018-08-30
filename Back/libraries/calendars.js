@@ -117,7 +117,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       const that = this;
       calendar.events.insert({
-        // auth: auth,
+        auth: auth,
         calendarId: 'primary',
         resource: this.structureEvent(eventInfo)
       }, function (err, event) {
@@ -132,7 +132,7 @@ module.exports = {
             })
             .catch(err => {
               reject(err);
-            })
+            });
         }
       });
     });
@@ -140,14 +140,22 @@ module.exports = {
 
   structureEvent: function (eventInfo) {
     const attendees = [];
-    attendees.push({ 'email': eventInfo['room']['Email'] });
-    eventInfo['attendees'].forEach(attendee => {
-      attendees.push({ 'email': attendee['Email'] });
-    });
+    let location = '';
+
+    if (eventInfo['room']) {
+      attendees.push({ 'email': eventInfo['room']['Email'] });
+      location = eventInfo['room']['Name'];
+    }
+
+    if (eventInfo['attendees']) {
+      eventInfo['attendees'].forEach(attendee => {
+        attendees.push({ 'email': attendee['Email'] });
+      });
+    }
 
     const eventToInsert = {
       'summary': eventInfo['title'],
-      'location': eventInfo['room']['Name'],
+      'location': location,
       'start': {
         'dateTime': eventInfo['startDate']
       },
@@ -191,8 +199,9 @@ module.exports = {
     });
   },
 
-  cancelEvent: function (auth, organizerEmail, eventId) {
+  cancelEvent: function (auth, organizerEmail, eventId, roomEmail) {
     const calendar = google.calendar({ version: 'v3', auth });
+    const that = this;
     return new Promise((resolve, reject) => {
       calendar.events.delete({
         calendarId: organizerEmail,
@@ -202,7 +211,13 @@ module.exports = {
           reject(err);
         }
         else {
-          resolve('');
+          that.getCalendar(auth, roomEmail)
+            .then(events => {
+              resolve(events);
+            })
+            .catch(err => {
+              reject(err)
+            });
         }
       });
     });
@@ -210,21 +225,61 @@ module.exports = {
 
   verifyOccupancy: function (roomToVerify, eventToVerify) {
     return new Promise((resolve, reject) => {
+      let res = 'no';
+      const promises = [];
+
       for (let i = 0; i < eventToVerify['attendees'].length; i++) {
-        const attendee = array[i];
+        const attendee = eventToVerify['attendees'][i];
         if (!attendee['resource'] && attendee['responseStatus'] === 'accepted') {
-          util.getUserPositionFromEmail(attendee['email'])
-            .then(position => {
-              if (position === roomToVerify) {
-                resolve('yes');
-              }
-            })
-            .catch(err => {
-              reject(err);
-            });
+          promises.push(util.getUserPositionFromEmail(attendee['email']));
         }
       }
-      resolve('no');
+
+      Promise.all(promises)
+        .then(positions => {
+          let j = 0;
+          for (let i = 0; i < eventToVerify['attendees'].length; i++) {
+            const attendee = eventToVerify['attendees'][i];
+            if (!attendee['resource'] && attendee['responseStatus'] === 'accepted') {
+              if (positions[j] === roomToVerify) {
+                res = 'yes';
+              }
+              j = j + 1;
+            }
+          }
+          resolve(res);
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  },
+
+  updateEndEvent: function (auth, calendarId, eventId, newEnd) {
+    const calendar = google.calendar({ version: 'v3', auth });
+    return new Promise((resolve, reject) => {
+      calendar.events.get({
+        calendarId: calendarId,
+        eventId: eventId
+      }, function (err, res) {
+        if (err) {
+          reject(err);
+        }
+        res.data.end.dateTime = newEnd;
+
+        calendar.events.update({
+          calendarId: calendarId,
+          eventId: eventId,
+          resource: res.data
+        }, function (err, response) {
+          if (err) {
+            reject(err);
+          }
+          else {
+            resolve(response.data);
+          }
+        });
+      });
     });
   }
 

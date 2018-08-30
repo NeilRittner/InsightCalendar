@@ -7,6 +7,7 @@ const app = express();
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 
 
 // Own libraries
@@ -17,13 +18,26 @@ const util = require('../libraries/utilitaries');
 const position = require('../libraries/position');
 
 
+// Some variables
+const options = {
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWD,
+  database: process.env.CALENDAR
+};
+const sessionStore = new MySQLStore(options);
+const authClient = authorization.setOAuth2Client();
+
+
 // Set the npm dependencies
-app.use(cors({ credentials: true, origin: process.env.ORIGIN }));
+app.use(cors({ origin: process.env.ORIGIN, credentials: true }));
 app.use(session({
   secret: process.env.SECRET,
+  store: sessionStore,
   resave: false,
-  saveUninitialized: true,
-  cookie: {}
+  saveUninitialized: false,
+  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -43,17 +57,17 @@ app.post('/googleAccess', function (req, res) {
     .then(payload => {
       connection.getUserInformation(payload)
         .then(userInfo => {
-          session.userInfo = userInfo;
-          session.authClient = authorization.setOAuth2Client();
-          authorization.hasTokens(session.userInfo['IdGoogle'])
+          req.session.userInfo = userInfo;
+          authorization.hasTokens(req.session.userInfo['IdGoogle'])
             .then(tokens => {
               if (tokens) {
-                session.authClient.setCredentials(tokens);
+                req.session.tokens = tokens;
                 res.status(200).send();
               }
               else {
-                let url = authorization.getAuthUrl(session.authClient);
-                url = url + '&login_hint=' + session.userInfo['IdGoogle'];
+                const authClient = authorization.setOAuth2Client();
+                let url = authorization.getAuthUrl(authClient);
+                url = url + '&login_hint=' + req.session.userInfo['IdGoogle'];
                 res.status(200).send(JSON.stringify(url));
               }
             })
@@ -83,8 +97,15 @@ app.post('/cardAccess', function (req, res) {
   connection.verifyCard(req.body.idCard)
     .then(userInfo => {
       if (userInfo) {
-        session.userInfo = userInfo;
-        res.status(200).send();
+        req.session.userInfo = userInfo;
+        authorization.hasTokens(req.session.userInfo['IdGoogle'])
+          .then(tokens => {
+            req.session.tokens = tokens;
+            res.status(200).send();
+          })
+          .catch(err => {
+            res.status(500).send(err);
+          });
       } 
       else {
         res.status(200).send(JSON.stringify('User has no card'));
@@ -109,17 +130,16 @@ app.post('/registerCard', function (req, res) {
     .then(payload => {
       connection.registerCard(payload, req.body.idCard)
         .then(userInfo => {
-          session.userInfo = userInfo;
-          session.authClient = authorization.setOAuth2Client();
-          authorization.hasTokens(session.userInfo['IdGoogle'])
+          req.session.userInfo = userInfo;
+          authorization.hasTokens(req.session.userInfo['IdGoogle'])
             .then(tokens => {
               if (tokens) {
-                session.authClient.setCredentials(tokens);
+                req.session.tokens = tokens;
                 res.status(200).send();
               } 
               else {
-                let url = authorization.getAuthUrl(session.authClient);
-                url = url + '&login_hint=' + session.userInfo['IdGoogle'];
+                let url = authorization.getAuthUrl(authClient);
+                url = url + '&login_hint=' + req.session.userInfo['IdGoogle'];
                 res.status(200).send(JSON.stringify(url));
               }
             })
@@ -147,8 +167,8 @@ app.post('/registerCard', function (req, res) {
 app.post('/code', function (req, res) {
   authorization.getTokens(req.body.code)
     .then(tokens => {
-      session.authClient.credentials = tokens;
-      authorization.storeTokens(session.userInfo['IdGoogle'], tokens['access_token'], tokens['refresh_token'])
+      req.session.tokens = tokens;
+      authorization.storeTokens(req.session.userInfo['IdGoogle'], tokens['access_token'], tokens['refresh_token'])
         .then(() => {
           res.status(200).send();
         })
@@ -171,8 +191,8 @@ app.post('/code', function (req, res) {
  * { 'IdGoogle':, 'LastName':, 'FirstName':, 'Email': }
  */
 app.get('/currentUser', function (req, res) {
-  if (session.userInfo) { 
-    res.send(session.userInfo);
+  if (req.session.userInfo) { 
+    res.send(req.session.userInfo);
   } 
   else { 
     res.status(500).send('User not set');
@@ -184,8 +204,10 @@ app.get('/currentUser', function (req, res) {
  * 
  */
 app.get('/userCalendar', function (req, res) {
+  authClient.setCredentials(req.session.tokens);
+
   if (req.query.timescale) {
-    calendars.getCalendar(session.authClient, req.query.calendarId, req.query.timescale)
+    calendars.getCalendar(authClient, req.query.calendarId, req.query.timescale)
       .then(events => {
         res.send(events);
       })
@@ -194,7 +216,7 @@ app.get('/userCalendar', function (req, res) {
       });
   } 
   else {
-    calendars.getCalendar(session.authClient, req.query.calendarId)
+    calendars.getCalendar(authClient, req.query.calendarId)
       .then(events => {
         res.send(events);
       })
@@ -223,7 +245,8 @@ app.get('/nameFromEmail', function (req, res) {
  * 
  */
 app.post('/createEvent', function (req, res) {
-  calendars.createEvent(session.authClient, req.body)
+  authClient.setCredentials(req.session.tokens);
+  calendars.createEvent(authClient, req.body)
     .then(() => {
       res.status(200).send();
     })
@@ -299,14 +322,13 @@ app.get('/roomOccupancy', function (req, res) {
  * 
  */
 app.post('/cancelEvent', function (req, res) {
-  console.log('sessionUser : ' + session.authClient);
-  calendars.cancelEvent(session.authClient, req.body.organizerEmail, req.body.eventId)
-    .then(() => {
-      console.log('2');
-      res.status(200).send();
+  authClient.setCredentials(req.session.tokens);
+
+  calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId, req.body.roomEmail)
+    .then(events => {
+      res.status(200).send(events);
     })
     .catch(err => {
-      console.log(err);
       res.status(500).send(err);
     });
 });
@@ -317,11 +339,27 @@ app.post('/cancelEvent', function (req, res) {
  */
 app.post('/verifyOccupancy', function (req, res) {
   calendars.verifyOccupancy(req.body.roomToVerify, req.body.eventToVerify)
-    .then(response => {
-      res.status(200).send(response);
+    .then(occupancyBool => {
+      res.status(200).send(occupancyBool);
     })
     .catch(err => {
       res.status(500).send(err);
     });
 });
+
+/**
+ * 
+ */
+app.post('/updateEndEvent', function (req, res) {
+  authClient.setCredentials(req.session.tokens);
+
+  calendars.updateEndEvent(authClient, req.body.calendarId, req.body.eventId, req.body.newEnd)
+    .then(eventUpdated => {
+      res.status(200).send(eventUpdated);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    })
+});
+
 module.exports = app;

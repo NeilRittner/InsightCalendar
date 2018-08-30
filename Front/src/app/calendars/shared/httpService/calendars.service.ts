@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
-import { text } from '@angular/core/src/render3/instructions';
 
 @Injectable({
   providedIn: 'root'
@@ -43,67 +42,83 @@ export class CalendarsService {
 
   getAllRooms(): Observable<any> {
     const url = `${environment.serveur_url}api/allRooms`;
-
+    const httpOptions = { withCredentials: true };
     return this.http
-      .get(url)
+      .get(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
   getAllUsers(): Observable<any> {
     const url = `${environment.serveur_url}api/allUsers`;
-
+    const httpOptions = { withCredentials: true };
     return this.http
-      .get(url)
+      .get(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
   postEvent(event): Observable<any> {
     const url = `${environment.serveur_url}api/createEvent`;
-    const httpOptions = event;
+    const httpOptions = { withCredentials: true };
     return this.http
-      .post(url, httpOptions)
+      .post(url, event, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
   postUserPosition(userIdCard, roomName): Observable<any> {
     const url = `${environment.serveur_url}api/updatePosition`;
-    const httpOptions = {
+    const httpBody = {
       userIdCard: userIdCard,
       roomName: roomName,
     };
+    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
     return this.http
-      .post(url, httpOptions, { responseType: 'text' })
+      .post(url, httpBody, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
   getRoomOccupancy(roomName): Observable<any> {
     const url = `${environment.serveur_url}api/roomOccupancy?roomName=${roomName}`;
+    const httpOptions = { withCredentials: true };
     return this.http
-      .get(url)
+      .get(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
-  cancelEvent(organizerEmail, eventId): Observable<any> {
+  cancelEvent(organizerEmail, eventId, roomEmail): Observable<any> {
     const url = `${environment.serveur_url}api/cancelEvent`;
-    const httpOptions = {
+    const httpBody = {
       organizerEmail: organizerEmail,
-      eventId: eventId
+      eventId: eventId,
+      roomEmail: roomEmail
     };
-
+    const httpOptions = { withCredentials: true };
     return this.http
-      .post(url, httpOptions)
+      .post(url, httpBody, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 
   verifyOccupancy(roomToVerify, eventToVerify): Observable<any> {
-    const url = `${environment.serveur_url}api/cancelEvent`;
-    const httpOptions = {
+    const url = `${environment.serveur_url}api/verifyOccupancy`;
+    const httpBody = {
       roomToVerify: roomToVerify,
       eventToVerify: eventToVerify
     };
-
+    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
     return this.http
-      .post(url, httpOptions, { responseType: 'text' })
+      .post(url, httpBody, httpOptions)
+      .pipe(catchError(err => throwError(err)));
+  }
+
+  updateEndEvent(calendarId, eventId, newEnd): Observable<any> {
+    const url = `${environment.serveur_url}api/updateEndEvent`;
+    const httpBody = {
+      calendarId: calendarId,
+      eventId: eventId,
+      newEnd: newEnd
+    };
+    const httpOptions = { withCredentials: true };
+    return this.http
+      .post(url, httpBody, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
 

@@ -67,7 +67,7 @@ export class CalendarComponent implements OnInit, OnChanges {
             this.pushInDays(indexInDays, valueEvent, 'danger', event['summary']);
             this.pushInDays(indexInDays, valueAfter, 'success', '');
           } else {
-            const valueInterEvent = valueEvent / 100 * 1;
+            const valueInterEvent = 0.2;
             valueEvent = valueEvent - valueInterEvent;
             this.pushInDays(indexInDays, valueEvent, 'danger', event['summary']);
             this.pushInDays(indexInDays, valueInterEvent, 'warning', '');

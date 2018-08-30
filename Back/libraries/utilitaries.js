@@ -68,8 +68,7 @@ module.exports = {
   },
 
   getUserPositionFromEmail: function (userEmail) {
-    const query = `SELECT Position FROM users WHERE Email = ${userEmail}`;
-
+    const query = `SELECT Position FROM users WHERE Email = '${userEmail}'`;
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
         if (!err) {

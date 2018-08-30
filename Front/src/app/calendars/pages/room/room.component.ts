@@ -31,15 +31,15 @@ export class RoomComponent implements OnInit {
   selectedRoom;
   faTimes = faTimes;
   nextEvent: Array<any>;
-  timeBeforeRemove = 10; // Time in minutes
+  timeBeforeRemove = 1; // Time in minutes
   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'];
   timeToWait: number;
+  numberScan: number;
 
   getUser(): void {
     this.httpService.getUser()
       .subscribe(user => {
-        // Do something else?
         this.dataService.user = user;
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);
@@ -94,52 +94,45 @@ export class RoomComponent implements OnInit {
   getCalendar(calendarId, timeScale?: string): void {
     this.httpService.getCalendar(calendarId, timeScale)
       .subscribe(events => {
-        this.timescale = events['timescale'];
-        this.events = events['events'];
-        this.nextEvent = [];
-        for (let i = 0; i < this.events.length; i++) {
-          const event = this.events[i];
-          this.httpService.getNameFromEmail(event['organizer']['email'])
-            .subscribe(name => {
-              if (name) {
-                event['organizer']['name'] = name['FirstName'] + ' ' + name['LastName'];
-              } else {
-                event['organizer']['name'] = null;
-              }
-            }, (err: HttpErrorResponse) => {
-              // Traiter l'erreur 500
-            });
-          event['date'] = this.extractDate(event['start']['dateTime']);
-          event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
-          event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
-
-          const now = new Date();
-          const startTimeArr = event['start']['dateTime'].split(':');
-          const startTimeH = this.convert12To24(event['start']['dateTime'], startTimeArr[1].split(' ')[1]).toString();
-          const nowISOS = now.toISOString();
-          const nowDay = this.extractDate(nowISOS);
-          const nowBisTime = now.getTime() - this.timeBeforeRemove * 60 * 1000;
-          const dateArr = event['date'].split(', ');
-          const startBisTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-          dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
-
-          if (nowDay === event['date'] && nowBisTime <= startBisTime && this.nextEvent.length === 0) {
-            this.nextEvent.push(event);
-            if (now.getTime() >= startBisTime) {
-              this.timeToWait = this.timeBeforeRemove * 60 * 1000 - (now.getTime() - startBisTime);
-            } else {
-              this.timeToWait = startBisTime - nowBisTime;
-            }
-          }
-        }
-
-        setTimeout(() => {
-          this.verifyOccupancy(this.nextEvent);
-        }, this.timeToWait);
+        this.calendarTreatments(events);
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);
         // 500: Internal Error Component
       });
+  }
+
+
+  calendarTreatments(events): void {
+    this.timescale = events['timescale'];
+    this.events = events['events'];
+    this.nextEvent = [];
+    for (let i = 0; i < this.events.length; i++) {
+      const event = this.events[i];
+      event['date'] = this.extractDate(event['start']['dateTime']);
+      event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
+      event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
+
+      const now = new Date();
+      const startTimeArr = event['start']['dateTime'].split(':');
+      const startTimeH = this.convert12To24(event['start']['dateTime'], startTimeArr[1].split(' ')[1]).toString();
+      const nowBisTime = now.getTime() - this.timeBeforeRemove * 60 * 1000;
+      const dateArr = event['date'].split(', ');
+      const startBisTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+        dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
+
+      if (nowBisTime <= startBisTime && this.nextEvent.length === 0) {
+        this.nextEvent = event;
+        if (now.getTime() >= startBisTime) {
+          this.timeToWait = this.timeBeforeRemove * 60 * 1000 - (now.getTime() - startBisTime);
+        } else {
+          this.timeToWait = startBisTime - nowBisTime;
+        }
+      }
+    }
+
+    setTimeout(() => {
+      this.verifyOccupancy(this.nextEvent);
+    }, this.timeToWait);
   }
 
 
@@ -163,19 +156,40 @@ export class RoomComponent implements OnInit {
 
 
   setUserPosition(): void {
-    // In this function, test if it's the meeting
     this.httpService.postUserPosition(this.idCardControl.value, this.selectedRoom['Name'])
       .subscribe(move => {
         if (move === 'in') {
           this.occupancy = this.occupancy + 1;
         } else {
           this.occupancy = this.occupancy - 1;
+          this.updateEndEvent();
         }
       }, (err: HttpErrorResponse) => {
-        console.log(err);
+        // console.log(err);
         // 500: Internal Error Component
       });
     this.idCardControl.reset();
+  }
+
+
+  updateEndEvent(): void {
+    const res = this.eventCurrently();
+    const currentEvent = res[0];
+    const posInEvents = res[1];
+
+    if (currentEvent) {
+      this.httpService.updateEndEvent(currentEvent['organizer']['email'], currentEvent['id'], new Date())
+        .subscribe(eventUpdated => {
+          eventUpdated['date'] = this.extractDate(eventUpdated['start']['dateTime']);
+          eventUpdated['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
+          eventUpdated['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
+          this.events[posInEvents] = eventUpdated;
+          this.events = this.events.slice();
+        }, (err: HttpErrorResponse) => {
+          // console.log(err['status']);
+          // 500: Internal Error Component
+        });
+    }
   }
 
 
@@ -191,41 +205,74 @@ export class RoomComponent implements OnInit {
 
 
   verifyOccupancy(eventToVerify): void {
-    console.log('il est 14h40 fdp');
     if (this.occupancy === 0) {
-      console.log('je vais supprimer');
-      this.httpService.cancelEvent(eventToVerify[0]['organizer']['email'], eventToVerify[0]['id'])
-        .subscribe(() => {
-          this.getCalendar(this.selectedRoom['Email']);
-          console.log('j ai supprimé');
-        }, (err: HttpErrorResponse) => {
-          console.log('j ai pas supprimé');
-          // console.log(err['status']);
-          // 500: Internal Error Component
-        });
+      this.cancelEvent(eventToVerify, this.selectedRoom['Email']);
     } else {
       this.httpService.verifyOccupancy(this.selectedRoom['Name'], eventToVerify)
         .subscribe(res => {
           if (res === 'no') {
-            this.httpService.cancelEvent(eventToVerify[0]['organizer']['email'], eventToVerify[0]['id'])
-              .subscribe(() => {
-                console.log('j ai supprimé');
-                this.getCalendar(this.selectedRoom['Email']);
-              }, (err: HttpErrorResponse) => {
-                console.log('j ai pas supprimé');
-                // console.log(err['status']);
-                // 500: Internal Error Component
-              });
+            this.cancelEvent(eventToVerify, this.selectedRoom['Email']);
           }
         }, (err: HttpErrorResponse) => {
-          console.log('erreur');
           // console.log(err['status']);
           // 500: Internal Error Component
         });
-      // Requeter serveur to know if there is someone who is an attendee
-      // If yes --> nothing, event is ok
-      // Else --> no one of the meeting --> cancel the meeting
     }
+  }
+
+
+  cancelEvent(eventToCancel, roomEmail): void {
+    this.httpService.cancelEvent(eventToCancel['organizer']['email'], eventToCancel['id'], roomEmail)
+      .subscribe(events => {
+        if (this.selectedRoom) {
+          let index = -1;
+          for (let i = 0; i < events['events'].length; i++) {
+            if (events['events'][i]['id'] === eventToCancel['id']) {
+              index = i;
+            }
+          }
+          if (index !== -1) {
+            events['events'] = (events['events'].slice(0, index)).concat(events['events'].slice(index + 1));
+          }
+          this.calendarTreatments(events);
+        }
+      }, (err: HttpErrorResponse) => {
+        // console.log(err['status']);
+        // 500: Internal Error Component
+      });
+  }
+
+
+  eventCurrently(): any {
+    let currentEvent = null;
+    let posInEvents = 0;
+    const now = new Date();
+    const nowDate = this.extractDate(now.toISOString());
+    const nowTime = now.getTime();
+
+    for (let i = 0; i < this.events.length; i++) {
+      const event = this.events[i];
+      const eventStartArr = event['start']['dateTime'].split(':');
+      const eventEndArr = event['end']['dateTime'].split(':');
+      const eventStartHour = eventStartArr[0];
+      const eventStartMoment = eventStartArr[1].split(' ')[1];
+      const eventStartHour24 = this.convert12To24(eventStartHour, eventStartMoment);
+      const eventEndHour = eventEndArr[0];
+      const eventEndMoment = eventEndArr[1].split(' ')[1];
+      const eventEndHour24 = this.convert12To24(eventEndHour, eventEndMoment);
+      const dateArr = event['date'].split(', ');
+      const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+        dateArr[1].split(' ')[1], eventStartHour24, parseInt(eventStartArr[1].split(' ')[0], 10)).getTime();
+      const endTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+        dateArr[1].split(' ')[1], eventEndHour24, parseInt(eventEndArr[1].split(' ')[0], 10)).getTime();
+
+      if (nowDate === event['date'] && startTime <= nowTime && endTime >= nowTime) {
+        currentEvent = event;
+        posInEvents = i;
+      }
+    }
+
+    return [currentEvent, posInEvents];
   }
 
 
