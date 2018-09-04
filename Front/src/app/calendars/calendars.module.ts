@@ -1,3 +1,4 @@
+import { environment } from './../../environments/environment';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -19,8 +20,17 @@ import { CalendarComponent } from './components/calendar/calendar.component';
 
 import { CalendarsService } from './shared/httpService/calendars.service';
 import { DataService } from './shared/dataService/data.service';
+import { SocketsService } from './shared/socketsService/sockets.service';
 
 import { routing } from './calendars-routing.module';
+
+import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
+
+// configuration du socket avec le serveur
+const socketsConfig: SocketIoConfig = {
+  url: environment.serveur_url,
+  options: {}
+};
 
 @NgModule({
   imports: [
@@ -38,7 +48,8 @@ import { routing } from './calendars-routing.module';
     MatAutocompleteModule,
     FontAwesomeModule,
     MatGridListModule,
-    ProgressbarModule.forRoot()
+    ProgressbarModule.forRoot(),
+    SocketIoModule.forRoot(socketsConfig)
   ],
   declarations: [
     UserComponent,
@@ -49,7 +60,8 @@ import { routing } from './calendars-routing.module';
   ],
   providers: [
     CalendarsService,
-    DataService
+    DataService,
+    SocketsService
   ],
   exports: []
 })

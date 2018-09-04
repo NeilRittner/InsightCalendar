@@ -8,6 +8,7 @@ import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
 import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
+import { SocketsService } from './../../shared/socketsService/sockets.service';
 
 @Component({
   selector: 'app-room',
@@ -18,7 +19,8 @@ export class RoomComponent implements OnInit {
 
   constructor(
     private httpService: CalendarsService,
-    private dataService: DataService
+    private dataService: DataService,
+    private socketsService: SocketsService
   ) { }
 
   timescale: string;
@@ -36,6 +38,10 @@ export class RoomComponent implements OnInit {
     'August', 'September', 'October', 'November', 'December'];
   timeToWait: number;
   numberScan: number;
+
+  // Sockets
+  insertEventConnection;
+
 
   getUser(): void {
     this.httpService.getUser()
@@ -79,7 +85,7 @@ export class RoomComponent implements OnInit {
   setRoom(room): void {
     this.selectedRoom = room;
     this.getOccupancy(this.selectedRoom['Name']);
-    this.getCalendar(this.selectedRoom['Email']);
+    this.setCalendar(this.selectedRoom['Email']);
   }
 
 
@@ -91,21 +97,30 @@ export class RoomComponent implements OnInit {
   }
 
 
-  getCalendar(calendarId, timeScale?: string): void {
-    this.httpService.getCalendar(calendarId, timeScale)
-      .subscribe(events => {
-        console.log(events);
-        this.calendarTreatments(events);
-      }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
+  getCalendar(calendarId, timeScale?: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      this.httpService.getCalendar(calendarId, timeScale)
+        .subscribe(events => {
+          this.timescale = events['timescale'];
+          this.events = events['events'];
+          resolve();
+        }, (err: HttpErrorResponse) => {
+          // console.log(err['status']);
+          // 500: Internal Error Component
+        });
+    });
+  }
+
+
+  setCalendar(roomEmail, timescale?: string): void {
+    this.getCalendar(roomEmail, timescale)
+      .then(() => {
+        this.calendarTreatments();
       });
   }
 
 
-  calendarTreatments(events): void {
-    this.timescale = events['timescale'];
-    this.events = events['events'];
+  calendarTreatments(): void {
     this.nextEvent = [];
     for (let i = 0; i < this.events.length; i++) {
       const event = this.events[i];
@@ -223,9 +238,9 @@ export class RoomComponent implements OnInit {
 
   cancelEvent(eventToCancel, roomEmail): void {
     this.httpService.cancelEvent(eventToCancel['organizer']['email'], eventToCancel['id'], roomEmail)
-      .subscribe(events => {
-        if (this.selectedRoom) {
-          this.calendarTreatments(events);
+      .subscribe(eventRemoved => {
+        if (this.selectedRoom && this.isRoom(this.selectedRoom['Email'], eventRemoved['attendees'])) {
+          this.removeEvent(eventRemoved['id'], this.timescale);
         }
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);
@@ -267,11 +282,99 @@ export class RoomComponent implements OnInit {
   }
 
 
+  setupSocket(): void {
+    this.insertEventConnection = this.socketsService.eventInserted()
+      .subscribe(data => {
+        if (this.selectedRoom && this.isRoom(this.selectedRoom['Email'], data['event']['attendees'])) {
+          this.getCalendar(this.selectedRoom['Email'])
+            .then(() => {
+              let newEvents;
+
+              if (this.timescale === 'Month' || (this.timescale === 'Week' && data['timescale'] === 'Day')) {
+                this.timescale = data['timescale'];
+              }
+
+              const newEventStartTime = new Date(data['event']['start']['dateTime'].split('+')[0]).getTime();
+              let index = -1;
+              for (let i = 0; i < this.events.length; i++) {
+                const event = this.events[i];
+                const eventStartTime = new Date(event['start']['dateTime'].split('+')[0]).getTime();
+                if (eventStartTime > newEventStartTime) {
+                  index = i;
+                }
+              }
+              if (index === -1) {
+                index = this.events.length;
+              }
+
+              newEvents = this.events.slice(0, index);
+              newEvents.push(data['event']);
+              newEvents = (newEvents).concat(this.events.slice(index));
+              this.events = newEvents;
+              this.calendarTreatments();
+            });
+        }
+      });
+  }
+
+
+  isRoom(roomEmail: string, newEventAttendees: Array<any>): boolean {
+    let isRoom = false;
+    for (let i = 0; i < newEventAttendees.length; i++) {
+      const attendee = newEventAttendees[i];
+      if (attendee['resource'] && roomEmail === attendee['email']) {
+        isRoom = true;
+      }
+    }
+    return isRoom;
+  }
+
+
+  removeEvent(eventId, timescale): void {
+    this.getCalendar(this.selectedRoom['Email'], timescale)
+      .then(() => {
+        const newEvents = this.removeEventInList(this.events, eventId);
+        if (timescale === 'Month' || newEvents.length !== 0) {
+          console.log('liste finale : ' + newEvents);
+          this.timescale = timescale;
+          this.events = newEvents;
+          this.calendarTreatments();
+        } else {
+          this.removeEvent(eventId, this.followingTimescale(timescale));
+        }
+      });
+  }
+
+
+  removeEventInList(events, eventId): Array<any> {
+    let index = -1;
+    for (let i = 0; i < events.length; i++) {
+      if (events[i]['id'] === eventId) {
+        index = i;
+      }
+    }
+    if (index !== -1) {
+      events = (events.slice(0, index)).concat(events.slice(index + 1));
+    }
+    return events;
+  }
+
+
+  followingTimescale(timescale: string): string {
+    if (timescale === 'Month' || timescale === 'Week') {
+      return 'Month';
+    } else {
+      return 'Week';
+    }
+  }
+
+
   ngOnInit() {
     if (JSON.stringify(this.dataService.user) === '{}') {
       this.getUser();
     }
     this.getRooms();
+    this.setupSocket();
   }
 
 }

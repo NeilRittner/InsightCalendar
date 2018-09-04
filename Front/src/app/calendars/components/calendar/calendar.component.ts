@@ -83,25 +83,42 @@ export class CalendarComponent implements OnInit, OnChanges {
       const month = now.getMonth() + 1;
       this.numberOfWeeksInMonth = this.weeksCount(year, month);
       const numberOfDays = new Date(year, month, 0).getDate();
+      const firstDayOfMonth = new Date(year, month - 1, 1);
 
       for (let i = 0; i < this.numberOfWeeksInMonth; i++) {
-        this.monthDays.push([[], [], [], [], []]);
-        this.daysNumber.push([[], [], [], [], []]);
+        if (i === 0) {
+          if (firstDayOfMonth.getDay() !== 0 && firstDayOfMonth.getDay() !== 6) {
+            this.monthDays.push([[], [], [], [], []]);
+            this.daysNumber.push([[], [], [], [], []]);
+          }
+        } else {
+          this.monthDays.push([[], [], [], [], []]);
+          this.daysNumber.push([[], [], [], [], []]);
+        }
       }
 
       for (let i = 1; i <= numberOfDays; i++) {
         const tmp = new Date(year, month - 1, i);
         if (tmp.getDay() !== 0 && tmp.getDay() !== 6) {
-          this.daysNumber[this.positionInMonth(tmp) - 1][tmp.getDay() - 1].push(i);
+          if (firstDayOfMonth.getDay() !== 0 && firstDayOfMonth.getDay() !== 6) {
+            this.daysNumber[this.positionInMonth(tmp) - 1][tmp.getDay() - 1].push(i);
+          } else {
+            this.daysNumber[this.positionInMonth(tmp) - 2][tmp.getDay() - 1].push(i);
+          }
         }
       }
 
       for (let i = 0; i < this.events.length; i++) {
         const event = this.events[i];
         const eventDate = new Date(event['date']);
-        const weekPos = this.positionInMonth(eventDate) - 1;
         const dayPos = eventDate.getDay() - 1;
-        this.monthDays[weekPos][dayPos].push(event);
+        let weekPos = this.positionInMonth(eventDate) - 1;
+        if (firstDayOfMonth.getDay() === 0 || firstDayOfMonth.getDay() === 6) {
+          weekPos = weekPos - 1;
+        }
+        if (dayPos !== -1 && dayPos !== 5) {
+          this.monthDays[weekPos][dayPos].push(event);
+        }
       }
     }
   }
@@ -116,7 +133,7 @@ export class CalendarComponent implements OnInit, OnChanges {
   }
 
   calculValueEvent(startTimeH, endTimeH, startTimeM, endTimeM): number {
-    if (endTimeH > 9 && startTimeH < 18) {
+    if (endTimeH >= 9 && startTimeH < 18) {
       const startH = Math.max(9, startTimeH);
       const endH = Math.min(18, endTimeH);
       let startM: number;

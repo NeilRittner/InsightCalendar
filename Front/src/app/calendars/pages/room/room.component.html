@@ -1,5 +1,5 @@
 <app-header [user]="this.dataService.user" [timeScale]="timescale" [occupancy]="occupancy"
-(timeScaleChanged)="getCalendar(this.selectedRoom['Email'], $event)">
+(timeScaleChanged)="setCalendar(selectedRoom['Email'], $event)">
 </app-header>
 
 <div class="container">

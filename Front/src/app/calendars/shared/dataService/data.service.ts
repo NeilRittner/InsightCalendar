@@ -8,5 +8,4 @@ export class DataService {
   constructor() { }
 
   public user = {};
-  public userTimeScale: string;
 }

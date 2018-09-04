@@ -1,5 +1,5 @@
-<app-header [user]='this.dataService.user' [timeScale]='timescale' (timeScaleChanged)='getCalendar($event)'>
+<app-header [user]='this.dataService.user' [timeScale]='timescale' (timeScaleChanged)='setCalendar($event)'>
 </app-header>
 
-<app-calendar [timeScale]='this.dataService.userTimeScale' [events]='events'>
+<app-calendar [timeScale]='timescale' [events]='events'>
 </app-calendar>

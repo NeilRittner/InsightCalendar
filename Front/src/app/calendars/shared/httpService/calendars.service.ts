@@ -122,4 +122,12 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
+  getCalendarAfterRemove(calendarId, eventId): Observable<any> {
+    const url = `${environment.serveur_url}api/calendarAfterRemove?calendarId=${calendarId}&evetId=${eventId}`;
+    const httpOptions = { withCredentials: true };
+    return this.http
+      .get(url, httpOptions)
+      .pipe(catchError(err => throwError(err)));
+  }
+
 }
