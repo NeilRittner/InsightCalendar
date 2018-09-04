@@ -32,6 +32,8 @@
     "core-js": "^2.5.4",
     "font-awesome": "^4.7.0",
     "hoek": "^5.0.4",
+    "ng-socket-io": "^0.2.4",
+    "ng6-socket-io": "^1.0.3",
     "ngx-bootstrap": "^3.0.1",
     "ngx-socket-io": "^1.1.1",
     "rxjs": "^6.0.0",
