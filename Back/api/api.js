@@ -8,6 +8,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
+const events = require('events');
+var ev = require('../libraries/eventEmitter');
 
 
 // Own libraries
@@ -247,10 +249,12 @@ app.get('/nameFromEmail', function (req, res) {
 app.post('/createEvent', function (req, res) {
   authClient.setCredentials(req.session.tokens);
   calendars.createEvent(authClient, req.body)
-    .then(() => {
+    .then(eventInserted => {
+      ev.emit('eventInserted', eventInserted);
       res.status(200).send();
     })
     .catch(err => {
+      console.log(err);
       res.status(500).send(err);
     });
 });
@@ -325,8 +329,9 @@ app.post('/cancelEvent', function (req, res) {
   authClient.setCredentials(req.session.tokens);
 
   calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId, req.body.roomEmail)
-    .then(events => {
-      res.status(200).send(events);
+    .then(eventRemoved => {
+      ev.emit('eventRemoved', eventRemoved)
+      res.status(200).send(eventRemoved);
     })
     .catch(err => {
       res.status(500).send(err);
