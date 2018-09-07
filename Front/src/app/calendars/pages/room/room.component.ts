@@ -1,14 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
 import { formatDate } from '../../../../../node_modules/@angular/common';
 import { FormControl } from '@angular/forms';
-import { Observable } from 'rxjs';
-import { map, startWith } from 'rxjs/operators';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
 import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
 import { SocketsService } from './../../shared/socketsService/sockets.service';
+
+import { ActivatedRoute } from '@angular/router';
+
 
 @Component({
   selector: 'app-room',
@@ -16,28 +16,29 @@ import { SocketsService } from './../../shared/socketsService/sockets.service';
   styleUrls: ['./room.component.css']
 })
 export class RoomComponent implements OnInit {
+  @ViewChild('scan') scanElement: ElementRef;
 
   constructor(
     private httpService: CalendarsService,
     private dataService: DataService,
-    private socketsService: SocketsService
+    private socketsService: SocketsService,
+    private route: ActivatedRoute
   ) { }
 
   timescale: string;
   events = [];
-  idCardControl = new FormControl();
-  occupancy: number;
-  roomsControl = new FormControl(); // FormControl for room
-  roomsAutocomplete = []; // Autocomplete of rooms
-  filteredRooms: Observable<any>; // List of rooms filtered according to box content
-  selectedRoom;
-  faTimes = faTimes;
+  idCardControl = new FormControl();  // FormControl for scan
+  selectedRoom = []; // Name and Email of the selected room
   nextEvent: Array<any>;
-  timeBeforeRemove = 1; // Time in minutes
+  nextEventPos: number;
+  timeBeforeRemove = 1; // Time in minutes before cancel an event
   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'];
-  timeToWait: number;
+  timeToWaitCancel: number;
+  timeToWaitStart: number;
   numberScan: number;
+  timeOutCancel;
+  timeOutStart;
 
   // Sockets
   insertEventConnection;
@@ -54,56 +55,43 @@ export class RoomComponent implements OnInit {
   }
 
 
-  getRooms(): void {
-    this.httpService.getAllRooms()
-      .subscribe(rooms => {
-        this.roomsAutocomplete = rooms;
-        this.setFilteredRoomsAutocomplete();
-      }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
+  setRoom(room): void {
+    const roomName = this.transformRoomName(room);
+    this.httpService.getRoomInformation(roomName)
+      .subscribe(dataRoom => {
+        this.selectedRoom = dataRoom;
+        this.scanElement.nativeElement.focus();
+        this.setCalendar(this.selectedRoom['Email']);
+        this.setupSocket();
       });
   }
 
 
-  roomsFilter(name: string) {
-    const filterValue = name.toLowerCase();
-
-    return this.roomsAutocomplete.filter(room => (room['Name']).toLowerCase().includes(filterValue));
+  transformRoomName(roomName: string): string {
+    const arrayName = roomName.split(/(?=[A-Z])/);
+    let prefix = 'NUIG ';
+    if (roomName === 'ConferenceRoom') {
+      prefix = prefix + 'Main ';
+    } else {
+      prefix = prefix + 'Meeting ';
+    }
+    return prefix + arrayName[0] + ' ' + arrayName[1];
   }
 
 
-  setFilteredRoomsAutocomplete(): void {
-    this.filteredRooms = this.roomsControl.valueChanges
-      .pipe(
-        startWith(''),
-        map(name => name ? this.roomsFilter(name) : this.roomsAutocomplete.slice()),
-      );
-  }
-
-
-  setRoom(room): void {
-    this.selectedRoom = room;
-    this.getOccupancy(this.selectedRoom['Name']);
-    this.setCalendar(this.selectedRoom['Email']);
-  }
-
-
-  clearRoom(): void {
-    this.events = [];
-    this.timescale = '';
-    this.selectedRoom = null;
-    this.roomsControl.reset();
+  setCalendar(roomEmail, timescale?: string): void {
+    this.getCalendar(roomEmail, timescale)
+      .then(data => {
+        this.calendarTreatments(data);
+      });
   }
 
 
   getCalendar(calendarId, timeScale?: string): Promise<any> {
     return new Promise((resolve, reject) => {
       this.httpService.getCalendar(calendarId, timeScale)
-        .subscribe(events => {
-          this.timescale = events['timescale'];
-          this.events = events['events'];
-          resolve();
+        .subscribe(data => {
+          resolve(data);
         }, (err: HttpErrorResponse) => {
           // console.log(err['status']);
           // 500: Internal Error Component
@@ -112,18 +100,10 @@ export class RoomComponent implements OnInit {
   }
 
 
-  setCalendar(roomEmail, timescale?: string): void {
-    this.getCalendar(roomEmail, timescale)
-      .then(() => {
-        this.calendarTreatments();
-      });
-  }
-
-
-  calendarTreatments(): void {
+  calendarTreatments(data: any): void {
     this.nextEvent = [];
-    for (let i = 0; i < this.events.length; i++) {
-      const event = this.events[i];
+    for (let i = 0; i < data['events'].length; i++) {
+      const event = data['events'][i];
       event['date'] = this.extractDate(event['start']['dateTime']);
       event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
       event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
@@ -133,21 +113,120 @@ export class RoomComponent implements OnInit {
       const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
       const nowBisTime = now.getTime() - this.timeBeforeRemove * 60 * 1000;
       const dateArr = event['date'].split(', ');
-      const startBisTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-        dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
-      if (nowBisTime <= startBisTime && this.nextEvent.length === 0) {
+      const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+      dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
+
+      if (this.nextEvent.length === 0 && nowBisTime < startTime) {
+        event['type'] = 'warning';
         this.nextEvent = event;
-        if (now.getTime() >= startBisTime) {
-          this.timeToWait = this.timeBeforeRemove * 60 * 1000 - (now.getTime() - startBisTime);
+        this.nextEventPos = i;
+      } else {
+        if (nowBisTime <= startTime) {
+          event['type'] = 'warning';
         } else {
-          this.timeToWait = startBisTime - nowBisTime;
+          event['type'] = 'danger';
         }
       }
     }
 
+    if (this.nextEvent.length !== 0) {
+      this.organizerIsPresent(this.nextEvent)
+        .then(bool => {
+          let now = new Date();
+          let startTimeArr = this.nextEvent['start']['dateTime'].split(':');
+          let startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
+          let dateArr = this.nextEvent['date'].split(', ');
+          let startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+            dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
+
+          if (bool === false || (bool === true && now.getTime() < startTime)) {
+            this.timeToWaitStart = startTime - now.getTime();
+            if (this.timeToWaitStart < 0) {
+              this.timeToWaitStart = 0;
+            }
+            this.startTimer(startTime);
+          } else {
+            if (this.events[this.nextEventPos + 1]) {
+              this.events[this.nextEventPos]['type'] = 'danger';
+              this.events[this.nextEventPos + 1]['type'] = 'warning';
+              this.nextEvent = this.events[this.nextEventPos + 1];
+              this.nextEventPos = this.nextEventPos + 1;
+
+              now = new Date();
+              startTimeArr = this.nextEvent['start']['dateTime'].split(':');
+              startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
+              dateArr = this.nextEvent['date'].split(', ');
+              startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+                dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
+              this.timeToWaitStart = startTime - now.getTime();
+              if (this.timeToWaitStart < 0) {
+                this.timeToWaitStart = 0;
+              }
+              this.startTimer(startTime);
+            } else {
+              this.nextEvent = [];
+              this.nextEventPos = -1;
+            }
+          }
+
+          this.timescale = data['timescale'];
+          this.events = data['events'];
+        });
+    } else {
+      this.timescale = data['timescale'];
+      this.events = data['events'];
+    }
+  }
+
+
+  organizerIsPresent(event): Promise<any> {
+    return new Promise((resolve, reject) => {
+      let orga;
+      if (event['creator']) {
+        orga = event['creator']['email'];
+      } else {
+        orga = event['organizer']['email'];
+      }
+      this.httpService.organizerIsPresent(orga, event['id'], this.selectedRoom['Name'])
+      .subscribe(response => {
+        if (response === 'yes') {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      }, (err: HttpErrorResponse) => {
+        // console.log(err['status']);
+        // 500: Internal Error Component ou 404
+      });
+    });
+  }
+
+
+  startTimer(startTime): void {
     setTimeout(() => {
-      this.verifyOccupancy(this.nextEvent);
-    }, this.timeToWait);
+      if (this.selectedRoom['Occupancy'] > 0) {
+        this.organizerIsPresent(this.nextEvent)
+          .then(bool => {
+            if (bool === true) {
+              this.events[this.nextEventPos]['type'] = 'danger';
+              this.events = this.events.slice();
+              this.newNextEvent();
+            } else {
+              this.cancelTimer(startTime);
+            }
+          });
+      } else {
+        this.cancelTimer(startTime);
+      }
+    }, this.timeToWaitStart);
+  }
+
+  cancelTimer(startTime): void {
+    const nowTime = new Date().getTime();
+    const timeToWaitCancel = startTime - nowTime + this.timeBeforeRemove * 60 * 1000;
+    this.timeOutCancel = setTimeout(() => {
+      this.cancelEvent(this.nextEvent, this.selectedRoom['Email']);
+    }, timeToWaitCancel);
   }
 
 
@@ -171,12 +250,14 @@ export class RoomComponent implements OnInit {
 
 
   setUserPosition(): void {
-    this.httpService.postUserPosition(this.idCardControl.value, this.selectedRoom['Name'])
+    const idCard = this.idCardControl.value;
+    this.httpService.postUserPosition(idCard, this.selectedRoom['Name'])
       .subscribe(move => {
         if (move === 'in') {
-          this.occupancy = this.occupancy + 1;
+          this.selectedRoom['Occupancy'] = this.selectedRoom['Occupancy'] + 1;
+          this.organizerBeforeCancel();
         } else {
-          this.occupancy = this.occupancy - 1;
+          this.selectedRoom['Occupancy'] = this.selectedRoom['Occupancy'] - 1;
           this.updateEndEvent();
         }
       }, (err: HttpErrorResponse) => {
@@ -187,50 +268,70 @@ export class RoomComponent implements OnInit {
   }
 
 
+  organizerBeforeCancel(): void {
+    const eventCurrently = this.eventCurrently();
+    const currentEvent = eventCurrently[0];
+    const posCurrentEvent = eventCurrently[1];
+    if (posCurrentEvent !== -1 && this.nextEvent['id'] === currentEvent['id']) {
+      this.organizerIsPresent(currentEvent)
+        .then(bool => {
+          if (bool === true) {
+            this.events[posCurrentEvent]['type'] = 'danger';
+            this.events = this.events.slice();
+            this.newNextEvent();
+          }
+        });
+    }
+  }
+
+
+  newNextEvent(): void {
+    if (this.timeOutCancel) {
+      clearTimeout(this.timeOutCancel);
+    }
+    if (this.events[this.nextEventPos + 1]) {
+      this.nextEvent = this.events[this.nextEventPos + 1];
+      this.nextEventPos = this.nextEventPos + 1;
+      const now = new Date();
+      const startTimeArr = this.nextEvent['start']['dateTime'].split(':');
+      const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
+      const dateArr = this.nextEvent['date'].split(', ');
+      const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+        dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
+      this.timeToWaitStart = startTime - now.getTime();
+      if (this.timeToWaitStart < 0) {
+        this.timeToWaitStart = 0;
+      }
+      this.startTimer(startTime);
+    } else {
+      this.nextEvent = [];
+      this.nextEventPos = -1;
+    }
+  }
+
+
   updateEndEvent(): void {
     const res = this.eventCurrently();
     const currentEvent = res[0];
     const posInEvents = res[1];
 
     if (currentEvent) {
-      this.httpService.updateEndEvent(currentEvent['organizer']['email'], currentEvent['id'], new Date())
-        .subscribe(eventUpdated => {
-          eventUpdated['date'] = this.extractDate(eventUpdated['start']['dateTime']);
-          eventUpdated['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
-          eventUpdated['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
-          this.events[posInEvents] = eventUpdated;
-          this.events = this.events.slice();
-        }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
-        });
-    }
-  }
-
-
-  getOccupancy(roomName): void {
-    this.httpService.getRoomOccupancy(roomName)
-      .subscribe(occupancy => {
-        this.occupancy = occupancy['Occupancy'];
-      }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
-      });
-  }
-
-
-  verifyOccupancy(eventToVerify): void {
-    if (this.occupancy === 0) {
-      this.cancelEvent(eventToVerify, this.selectedRoom['Email']);
-    } else {
-      this.httpService.verifyOccupancy(this.selectedRoom['Name'], eventToVerify)
-        .subscribe(res => {
-          if (res === 'no') {
-            this.cancelEvent(eventToVerify, this.selectedRoom['Email']);
+      this.organizerIsPresent(currentEvent)
+        .then(bool => {
+          if (bool === false) {
+            this.httpService.updateEndEvent(currentEvent['organizer']['email'], currentEvent['id'], new Date())
+              .subscribe(eventUpdated => {
+                eventUpdated['date'] = this.extractDate(eventUpdated['start']['dateTime']);
+                eventUpdated['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
+                eventUpdated['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
+                this.events[posInEvents] = eventUpdated;
+                console.log(this.events);
+                this.events = this.events.slice();
+              }, (err: HttpErrorResponse) => {
+                // console.log(err['status']);
+                // 500: Internal Error Component
+              });
           }
-        }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
         });
     }
   }
@@ -251,7 +352,7 @@ export class RoomComponent implements OnInit {
 
   eventCurrently(): any {
     let currentEvent = null;
-    let posInEvents = 0;
+    let posInEvents = -1;
     const now = new Date();
     const nowDate = this.extractDate(now.toISOString());
     const nowTime = now.getTime();
@@ -287,11 +388,17 @@ export class RoomComponent implements OnInit {
       .subscribe(data => {
         if (this.selectedRoom && this.isRoom(this.selectedRoom['Email'], data['event']['attendees'])) {
           this.getCalendar(this.selectedRoom['Email'])
-            .then(() => {
+            .then(dataGet => {
+              if (this.timeOutStart) {
+                clearTimeout(this.timeOutStart);
+              }
+              if (this.timeOutCancel) {
+                clearTimeout(this.timeOutCancel);
+              }
               let newEvents;
 
-              if (this.timescale === 'Month' || (this.timescale === 'Week' && data['timescale'] === 'Day')) {
-                this.timescale = data['timescale'];
+              if (dataGet['timescale'] === 'Month' || (dataGet['timescale'] === 'Week' && data['timescale'] === 'Day')) {
+                dataGet['timescale'] = data['timescale'];
               }
 
               const newEventStartTime = new Date(data['event']['start']['dateTime'].split('+')[0]).getTime();
@@ -310,8 +417,8 @@ export class RoomComponent implements OnInit {
               newEvents = this.events.slice(0, index);
               newEvents.push(data['event']);
               newEvents = (newEvents).concat(this.events.slice(index));
-              this.events = newEvents;
-              this.calendarTreatments();
+              dataGet['events'] = newEvents;
+              this.calendarTreatments(dataGet);
             });
         }
       });
@@ -332,13 +439,12 @@ export class RoomComponent implements OnInit {
 
   removeEvent(eventId, timescale): void {
     this.getCalendar(this.selectedRoom['Email'], timescale)
-      .then(() => {
-        const newEvents = this.removeEventInList(this.events, eventId);
+      .then(data => {
+        const newEvents = this.removeEventInList(data['events'], eventId);
         if (timescale === 'Month' || newEvents.length !== 0) {
-          console.log('liste finale : ' + newEvents);
-          this.timescale = timescale;
-          this.events = newEvents;
-          this.calendarTreatments();
+          data['timescale'] = timescale;
+          data['events'] = newEvents;
+          this.calendarTreatments(data);
         } else {
           this.removeEvent(eventId, this.followingTimescale(timescale));
         }
@@ -373,8 +479,9 @@ export class RoomComponent implements OnInit {
     if (JSON.stringify(this.dataService.user) === '{}') {
       this.getUser();
     }
-    this.getRooms();
-    this.setupSocket();
+    this.route.params.subscribe(params => {
+      this.setRoom(params['roomName']);
+    });
   }
 
 }

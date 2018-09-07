@@ -39,6 +39,20 @@
 
     <div>
       <mat-form-field>
+        <input type="text" placeholder="Add a co-organizer" aria-label="Number" matInput [formControl]="coOrgaControl"
+        [matAutocomplete]="autoCoOrga">
+        <mat-autocomplete #autoCoOrga="matAutocomplete">
+          <mat-option *ngFor="let coOrga of filteredAttendees | async" 
+          [value]="coOrga['FirstName'] + ' ' + coOrga['LastName']" (click)="setCoOrga(coOrga)">
+             {{ coOrga['FirstName'] }} {{ coOrga['LastName']}}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+      <fa-icon class="cursor" [icon]="faTimes" (click)="clearCoOrga()"></fa-icon>
+    </div>
+
+    <div>
+      <mat-form-field>
         <input type="text" placeholder="Add attendee" aria-label="Number" matInput [formControl]="attendeesControl" 
         [matAutocomplete]="autoAttendee">
         <mat-autocomplete #autoAttendee="matAutocomplete">

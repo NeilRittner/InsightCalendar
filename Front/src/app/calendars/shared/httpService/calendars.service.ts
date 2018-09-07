@@ -97,18 +97,6 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  verifyOccupancy(roomToVerify, eventToVerify): Observable<any> {
-    const url = `${environment.serveur_url}api/verifyOccupancy`;
-    const httpBody = {
-      roomToVerify: roomToVerify,
-      eventToVerify: eventToVerify
-    };
-    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
-    return this.http
-      .post(url, httpBody, httpOptions)
-      .pipe(catchError(err => throwError(err)));
-  }
-
   updateEndEvent(calendarId, eventId, newEnd): Observable<any> {
     const url = `${environment.serveur_url}api/updateEndEvent`;
     const httpBody = {
@@ -125,6 +113,31 @@ export class CalendarsService {
   getCalendarAfterRemove(calendarId, eventId): Observable<any> {
     const url = `${environment.serveur_url}api/calendarAfterRemove?calendarId=${calendarId}&evetId=${eventId}`;
     const httpOptions = { withCredentials: true };
+    return this.http
+      .get(url, httpOptions)
+      .pipe(catchError(err => throwError(err)));
+  }
+
+  getRoomInformation(roomName): Observable<any> {
+    const url = `${environment.serveur_url}api/roomInformation?roomName=${roomName}`;
+    const httpOptions = { withCredentials: true };
+    return this.http
+      .get(url, httpOptions)
+      .pipe(catchError(err => throwError(err)));
+  }
+
+  getUserFromIdCard(idCard): Observable<any> {
+    const url = `${environment.serveur_url}api/mailFromCard?idCard=${idCard}`;
+    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
+    return this.http
+      .get(url, httpOptions)
+      .pipe(catchError(err => throwError(err)));
+  }
+
+  organizerIsPresent(organizerEmail, eventId, roomName): Observable<any> {
+    const url = `${environment.serveur_url}api/organizerIsPresent?` +
+    `organizerEmail=${organizerEmail}&eventId=${eventId}&roomName=${roomName}`;
+    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
     return this.http
       .get(url, httpOptions)
       .pipe(catchError(err => throwError(err)));

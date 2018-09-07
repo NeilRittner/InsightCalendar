@@ -254,7 +254,6 @@ app.post('/createEvent', function (req, res) {
       res.status(200).send();
     })
     .catch(err => {
-      console.log(err);
       res.status(500).send(err);
     });
 });
@@ -326,9 +325,10 @@ app.get('/roomOccupancy', function (req, res) {
  * 
  */
 app.post('/cancelEvent', function (req, res) {
+  // Set le credential à l'organisateur de l'event
   authClient.setCredentials(req.session.tokens);
 
-  calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId, req.body.roomEmail)
+  calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId)
     .then(eventRemoved => {
       ev.emit('eventRemoved', eventRemoved)
       res.status(200).send(eventRemoved);
@@ -356,6 +356,7 @@ app.post('/verifyOccupancy', function (req, res) {
  * 
  */
 app.post('/updateEndEvent', function (req, res) {
+  // Set le credential à l'organisateur de l'event
   authClient.setCredentials(req.session.tokens);
 
   calendars.updateEndEvent(authClient, req.body.calendarId, req.body.eventId, req.body.newEnd)
@@ -364,7 +365,58 @@ app.post('/updateEndEvent', function (req, res) {
     })
     .catch(err => {
       res.status(500).send(err);
-    })
+    });
 });
 
+/**
+ * 
+ */
+app.get('/roomInformation', function (req, res) {
+  util.getRoomInformation(req.query.roomName)
+    .then(dataRoom => {
+      res.status(200).send(dataRoom);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+});
+
+/**
+ * 
+ */
+app.get('/mailFromCard', function (req, res) {
+  util.getUserMailFromCard(req.query.idCard)
+    .then(email => {
+      res.status(200).send(email);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+});
+
+/**
+ * 
+ */
+app.get('/organizerIsPresent', function (req, res) {
+  util.organizerIsPresent(req.query.organizerEmail, req.query.eventId, req.query.roomName)
+    .then(response => {
+      res.status(200).send(response);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+});
+
+/**
+ * 
+ */
+app.get('/organizersLeave', function (req, res) {
+  util.organizersLeave(req.query.organizerEmail, req.query.eventId, req.query.roomName)
+    .then(response => {
+      res.status(200).send(response);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+});
 module.exports = app;

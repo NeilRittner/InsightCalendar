@@ -70,6 +70,7 @@ export class UserComponent implements OnInit {
       event['date'] = this.extractDate(event['start']['dateTime']);
       event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
       event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
+      event['type'] = 'danger';
     }
     this.timescale = data['timescale'];
     this.events = data['events'];
@@ -106,8 +107,6 @@ export class UserComponent implements OnInit {
               dataFinal['events'] = dataGet['events'].slice(0, index);
               dataFinal['events'].push(dataInsert['event']);
               dataFinal['events'] = (dataFinal['events']).concat(dataGet['events'].slice(index));
-              console.log(dataFinal['events']);
-              console.log(JSON.stringify(dataFinal['events']));
               this.calendarTreatments(dataFinal);
             });
         }

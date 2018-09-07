@@ -1,31 +1,16 @@
-<app-header [user]="this.dataService.user" [timeScale]="timescale" [occupancy]="occupancy"
+<app-header [user]="this.dataService.user" [occupancy]="selectedRoom['Occupancy']"
 (timeScaleChanged)="setCalendar(selectedRoom['Email'], $event)">
 </app-header>
 
 <div class="container">
-  <div class="row">
-    <div>
-      <mat-form-field>
-        <input type="text" placeholder="Choose a room" aria-label="Number" matInput [formControl]="roomsControl" [matAutocomplete]="autoRoom">
-        <mat-autocomplete #autoRoom="matAutocomplete">
-          <mat-option *ngFor="let room of filteredRooms | async" [value]="room['Name']" (click)="setRoom(room)">
-            {{ room['Name'] }}
-          </mat-option>
-        </mat-autocomplete>
-      </mat-form-field>
-      <fa-icon class="cursor" [icon]="faTimes" (click)="clearRoom()"></fa-icon>
-    </div>
+  <app-calendar [timeScale]='timescale' [events]='events'>
+  </app-calendar>
 
-    <form *ngIf="selectedRoom">
-      <div>
-        <input type="password" class="form-control" [formControl]="idCardControl" autofocus>
-      </div>
-      <button (click)="setUserPosition(idCardControl.value)" hidden></button>
-    </form>
-  </div>
-  
-  <div *ngIf="events.length > 0">
-    <app-calendar [timeScale]='timescale' [events]='events'>
-    </app-calendar>
-  </div>
+  <br>
+  <form>
+    <div>
+      <input #scan type="password" class="form-control" [formControl]="idCardControl">
+    </div>
+    <button (click)="setUserPosition(idCardControl.value)" hidden></button>
+  </form>
 </div>

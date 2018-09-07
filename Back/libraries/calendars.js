@@ -9,66 +9,21 @@ const pool = require('../db/pool');
 
 // The functions
 module.exports = {
-  getCalendar: function (auth, calendarId, timeScale = null) {
+  getCalendar: function (auth, calendarId, timeScale = 'Week') {
     const calendar = google.calendar({ version: 'v3', auth });
     const eventsToSend = {};
-    let times;
-    if (timeScale) {
-      times = this.getTimes(timeScale);
-      return new Promise((resolve, reject) => {
-        this.pullCalendar(calendar, calendarId, times)
-          .then(events => {
-            eventsToSend['timescale'] = timeScale;
-            eventsToSend['events'] = events;
-            resolve(eventsToSend);
-          })
-          .catch(err => {
-            reject(err);
-          });
-      });
-    }
-    else {
-      return new Promise((resolve, reject) => {
-        times = this.getTimes('Day');
-        this.pullCalendar(calendar, calendarId, times)
-          .then(eventsDay => {
-            if (eventsDay.length === 0) {
-              times = this.getTimes('Week');
-              this.pullCalendar(calendar, calendarId, times)
-                .then(eventsWeek => {
-                  if (eventsWeek.length === 0) {
-                    times = this.getTimes('Month');
-                    this.pullCalendar(calendar, calendarId, times)
-                      .then(eventsMonth => {
-                        eventsToSend['timescale'] = 'Month';
-                        eventsToSend['events'] = eventsMonth;
-                        resolve(eventsToSend);
-                      })
-                      .catch(err => {
-                        reject(err);
-                      });
-                  }
-                  else {
-                    eventsToSend['timescale'] = 'Week';
-                    eventsToSend['events'] = eventsWeek;
-                    resolve(eventsToSend);
-                  }
-                })
-                .catch(err => {
-                  reject(err);
-                });
-            }
-            else {
-              eventsToSend['timescale'] = 'Day';
-              eventsToSend['events'] = eventsDay;
-              resolve(eventsToSend);
-            }
-          })
-          .catch(err => {
-            reject(err);
-          });
-      });
-    }
+    const times = this.getTimes(timeScale ? timeScale : 'Week');
+    return new Promise((resolve, reject) => {
+      this.pullCalendar(calendar, calendarId, times)
+        .then(events => {
+          eventsToSend['timescale'] = timeScale;
+          eventsToSend['events'] = events;
+          resolve(eventsToSend);
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
   },
 
   pullCalendar: function (calendar, calendarId, times) {
@@ -125,7 +80,7 @@ module.exports = {
           reject (err);
         }
         else {
-          that.insertEventDB(event['data'])
+          that.insertEventDB(event['data'], eventInfo['organizer2'])
             .then(() => {
               resolve(event['data']);
             })
@@ -141,9 +96,15 @@ module.exports = {
     const attendees = [];
     let location = '';
 
+    attendees.push({ 'email': eventInfo['organizer1'], 'organizer': true });
+
     if (eventInfo['room']) {
       attendees.push({ 'email': eventInfo['room']['Email'] });
       location = eventInfo['room']['Name'];
+    }
+
+    if (eventInfo['organizer2']) {
+      attendees.push({ 'email': eventInfo['organizer2']['Email'] });
     }
 
     if (eventInfo['attendees']) {
@@ -173,34 +134,37 @@ module.exports = {
     return eventToInsert;
   },
 
-  insertEventDB: function (eventInfo) {
+  insertEventDB: function (eventInfo, orga2) {
     return new Promise((resolve, reject) => {
-      util.getNameFromEmail(eventInfo['organizer']['email'])
-        .then(name => {
-          const start = eventInfo['start']['dateTime'].split("+")[0];
-          const end = eventInfo['end']['dateTime'].split("+")[0];
-          const query = `INSERT INTO reservations 
-          (idEventGoogleCalendar, OrganizerLastName, OrganizerFirstName, StartDate, EndDate)
-          VALUES ('${eventInfo['id']}', '${name['LastName']}', '${name['FirstName']}', '${start}', '${end}')`;
+      const start = eventInfo['start']['dateTime'].split("+")[0];
+      const end = eventInfo['end']['dateTime'].split("+")[0];
+      let orga2Email = null;
+      let room = null;
 
-          pool.calendar_pool.query(query, function (err) {
-            if (!err) {
-              resolve('Event inserted');
-            }
-            else {
-              reject(err);
-            }
-          });
-        })
-        .catch(err => {
-          reject(err)
-        });
+      if (orga2) {
+        orga2Email = orga2['Email'];
+      }
+      if (eventInfo['room']) {
+        room = eventInfo['room']['Name']
+      }
+
+      const query = `INSERT INTO reservations 
+      (idEventGoogleCalendar, Organizer1, Organizer2, Room, StartDate, EndDate)
+      VALUES ('${eventInfo['id']}', '${eventInfo['organizer']['email']}', '${orga2Email}', '${room}', '${start}', '${end}')`;
+
+      pool.calendar_pool.query(query, function (err) {
+        if (!err) {
+          resolve('Event inserted');
+        }
+        else {
+          reject(err);
+        }
+      });
     });
   },
 
-  cancelEvent: function (auth, organizerEmail, eventId, roomEmail) {
+  cancelEvent: function (auth, organizerEmail, eventId) {
     const calendar = google.calendar({ version: 'v3', auth });
-    const that = this;
     return new Promise((resolve, reject) => {
       calendar.events.delete({
         calendarId: organizerEmail,
@@ -227,29 +191,27 @@ module.exports = {
 
   verifyOccupancy: function (roomToVerify, eventToVerify) {
     return new Promise((resolve, reject) => {
-      let res = 'no';
-      const promises = [];
-
-      for (let i = 0; i < eventToVerify['attendees'].length; i++) {
-        const attendee = eventToVerify['attendees'][i];
-        if (!attendee['resource'] && attendee['responseStatus'] === 'accepted') {
-          promises.push(util.getUserPositionFromEmail(attendee['email']));
-        }
-      }
-
-      Promise.all(promises)
-        .then(positions => {
-          let j = 0;
-          for (let i = 0; i < eventToVerify['attendees'].length; i++) {
-            const attendee = eventToVerify['attendees'][i];
-            if (!attendee['resource'] && attendee['responseStatus'] === 'accepted') {
-              if (positions[j] === roomToVerify) {
-                res = 'yes';
-              }
-              j = j + 1;
-            }
+      util.getSecondOrganizer(eventToVerify['id'])
+        .then(orga2 => {
+          let res = 'no';
+          const promises = [];
+          promises.push(util.getUserPositionFromEmail(eventToVerify['organizer']['email']));
+          if (orga2) {
+            promises.push(util.getUserPositionFromEmail(orga2));
           }
-          resolve(res);
+
+          Promise.all(promises)
+            .then(positions => {
+              for (let i = 0; i < promises.length; i++) {
+                if (positions[i] === roomToVerify) {
+                  res = 'yes';
+                }
+              }
+              resolve(res);
+            })
+            .catch(err => {
+              reject(err);
+            });
         })
         .catch(err => {
           reject(err);

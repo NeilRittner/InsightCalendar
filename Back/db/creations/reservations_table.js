@@ -17,8 +17,8 @@ con.connect(function (err) {
   
   const query = `CREATE TABLE if not exists reservations(
     IdEventGoogleCalendar varchar(255) primary key,
-    OrganizerLastName varchar(255)not null,
-    OrganizerFirstName varchar(255)not null,
+    Organizer1 varchar(255) not null,
+    Organizer2 varchar(255) null,
     Room varchar(255) null,
     Attendees text null,
     StartDate datetime not null,

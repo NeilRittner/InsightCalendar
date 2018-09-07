@@ -12,10 +12,21 @@ export class HeaderComponent implements OnInit {
     private router: Router
   ) { }
 
+  roomNamesList = ['ConferenceRoom', 'RoomA', 'RoomB', 'RoomC'];
+
   @Input() user;
   @Input() timeScale: string;
   @Input() occupancy: number;
   @Output() timeScaleChanged: EventEmitter<string> = new EventEmitter();
+
+  /**
+   * Regex source : https://stackoverflow.com/questions/10064683/split-by-caps-in-javascript
+   * @param roomName
+   */
+  spaceRoomName(roomName: string): string {
+    const arrayName = roomName.split(/(?=[A-Z])/);
+    return arrayName[0] + ' ' + arrayName[1];
+  }
 
   changeTimeScale(newTimeScale: string): void {
     this.timeScaleChanged.emit(newTimeScale);

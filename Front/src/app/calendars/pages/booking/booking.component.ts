@@ -32,6 +32,9 @@ export class BookingComponent implements OnInit {
   filteredRooms: Observable<any>; // List of rooms filtered according to box content
   selectedRoom;
 
+  coOrgaControl = new FormControl();
+  coOrga;
+
   attendeesControl = new FormControl();  // FormControl for autocomplete
   attendeesAutocomplete = []; // Autocomplete of attendees which are not selected
   filteredAttendees: Observable<any>; // List of attendees filtered according to box content
@@ -118,6 +121,26 @@ export class BookingComponent implements OnInit {
   /**
    *
    */
+  setCoOrga(coOrga): void {
+    this.coOrga = coOrga;
+    const index = this.attendeesAutocomplete.findIndex(att => att['Email'] === coOrga['Email']);
+    this.attendeesAutocomplete.splice(index, 1);
+    this.setFilteredAttendeesAutcomplete();
+    this.attendeesControl.reset();
+  }
+
+  /**
+   *
+   */
+  clearCoOrga(): void {
+    this.attendeesAutocomplete.push(this.coOrga);
+    this.setFilteredAttendeesAutcomplete();
+    this.coOrgaControl.reset();
+  }
+
+  /**
+   *
+   */
   getAllUsers(): void {
     this.httpService.getAllUsers()
       .subscribe(users => {
@@ -183,7 +206,9 @@ export class BookingComponent implements OnInit {
         startDate: this.startDate,
         endDate: this.endDate,
         room: this.selectedRoom,
-        attendees: this.attendeesList
+        attendees: this.attendeesList,
+        organizer1: this.dataService.user['Email'],
+        organizer2: this.coOrga
       };
       this.httpService.postEvent(event)
         .subscribe(() => {
@@ -193,8 +218,8 @@ export class BookingComponent implements OnInit {
           // 500: Internal Error Component
         });
     } else {
-      // Probleme date de fin < date de début
-      // Do something
+      // endDate < startDate
+      // Do something to display the error
       console.log('issue in the date');
     }
   }

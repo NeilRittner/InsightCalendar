@@ -8,7 +8,7 @@ import { BookingComponent } from './pages/booking/booking.component';
 const calendarsRoutes: Routes = [
   { path: 'user', component: UserComponent },
   { path: 'booking', component: BookingComponent },
-  { path: 'room', component: RoomComponent }
+  { path: 'room/:roomName', component: RoomComponent }
 ];
 
 

@@ -19,6 +19,9 @@ export class CalendarComponent implements OnInit, OnChanges {
   numberOfWeeksInMonth: number;
   monthDays: Array<any>;
   daysNumber: Array<any>;
+  // colorCodes = ['#27A844', '#FEC106', '#DC3546', '#007AFF'];
+  // colorSignifications = ['Room Free', 'Meeting expected', 'Meeting in progress or done', 'Transition'];
+  timeBeforeRemove = 1;
 
   ngOnChanges() {
     if (this.timeScale !== 'Month') {
@@ -62,16 +65,40 @@ export class CalendarComponent implements OnInit, OnChanges {
           } else {
             valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
           }
-
+          console.log(valueAfter);
           if (valueAfter > 0 || (this.events[i + 1] && this.events[i + 1]['date'] !== event['date'])) {
-            this.pushInDays(indexInDays, valueEvent, 'danger', event['summary']);
+            this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
             this.pushInDays(indexInDays, valueAfter, 'success', '');
+          } else if (valueAfter = 0 && endTimes[0] >= 18) {
+            console.log('iicccccciiiiiiii');
+            this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
           } else {
             const valueInterEvent = 0.2;
             valueEvent = valueEvent - valueInterEvent;
-            this.pushInDays(indexInDays, valueEvent, 'danger', event['summary']);
-            this.pushInDays(indexInDays, valueInterEvent, 'warning', '');
+            this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+            this.pushInDays(indexInDays, valueInterEvent, 'info', '');
           }
+        } else if (valueEvent === 0 && startTimes[0] >= 9 && endTimes[0] < 18) {
+          /* ValueBefore */
+          if (!exEventLongDate || exEventLongDate.getDate() !== eventLongDate.getDate()) {
+            exEventLongDate = eventLongDate;
+            const valueBefore = ((startTimes[0] - 9) * (100 / this.nbHours)) + (startTimes[1] * (100 / (this.nbHours * 60)));
+            if (valueBefore > 0) {
+              this.pushInDays(indexInDays, valueBefore, 'success', '');
+            }
+          }
+
+          /* ValueAfter */
+          let valueAfter;
+          if (this.events[i + 1] && this.events[i + 1]['date'] === event['date']) {
+            const startTimesNext = this.events[i + 1]['start']['dateTime'].split(':');
+            startTimesNext[0] = this.adaptTime(startTimesNext[0], startTimesNext[1].split(' ')[1]);
+            valueAfter = this.calculValueAfter(startTimesNext[0], endTimes[0], startTimesNext[1].split(' ')[0], endTimes[1]);
+          } else {
+            valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
+          }
+
+          this.pushInDays(indexInDays, valueAfter, 'success', '');
         }
       }
       this.completeEmptyDays();
@@ -164,7 +191,13 @@ export class CalendarComponent implements OnInit, OnChanges {
       hour = hour - 1;
       min = min + 60;
     }
-    return (hour * (100 / this.nbHours) + min * (100 / (this.nbHours * 60)));
+    const valueAfter = (hour * (100 / this.nbHours) + min * (100 / (this.nbHours * 60)));
+    if (valueAfter < 0) {
+      return 0;
+    } else {
+      return valueAfter;
+    }
+    // return (hour * (100 / this.nbHours) + min * (100 / (this.nbHours * 60)));
   }
 
   adaptTime(time, moment): number {
@@ -213,6 +246,20 @@ export class CalendarComponent implements OnInit, OnChanges {
       diff = diff - 1;
     }
     return Math.ceil((lastDate - diff) / 7) + 1;
+  }
+
+  determineEventType(dateEvent: Date, startH, startM): string {
+    const nowTime = new Date().getTime();
+    const eventDate = dateEvent;
+    eventDate.setHours(startH);
+    eventDate.setMinutes(startM);
+    const eventTime = eventDate.getTime();
+
+    if (nowTime < eventTime + this.timeBeforeRemove * 60 * 1000) {
+      return 'warning';
+    } else {
+      return 'danger';
+    }
   }
 
   ngOnInit() {
