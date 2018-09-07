@@ -65,12 +65,11 @@ export class CalendarComponent implements OnInit, OnChanges {
           } else {
             valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
           }
-          console.log(valueAfter);
+
           if (valueAfter > 0 || (this.events[i + 1] && this.events[i + 1]['date'] !== event['date'])) {
             this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
             this.pushInDays(indexInDays, valueAfter, 'success', '');
-          } else if (valueAfter = 0 && endTimes[0] >= 18) {
-            console.log('iicccccciiiiiiii');
+          } else if (valueAfter === 0 && endTimes[0] >= 18) {
             this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
           } else {
             const valueInterEvent = 0.2;
@@ -97,7 +96,6 @@ export class CalendarComponent implements OnInit, OnChanges {
           } else {
             valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
           }
-
           this.pushInDays(indexInDays, valueAfter, 'success', '');
         }
       }
@@ -192,7 +190,7 @@ export class CalendarComponent implements OnInit, OnChanges {
       min = min + 60;
     }
     const valueAfter = (hour * (100 / this.nbHours) + min * (100 / (this.nbHours * 60)));
-    if (valueAfter < 0) {
+    if (valueAfter <= 0) {
       return 0;
     } else {
       return valueAfter;
