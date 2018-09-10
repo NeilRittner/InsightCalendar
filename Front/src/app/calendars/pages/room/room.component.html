@@ -1,9 +1,8 @@
-<app-header [user]="this.dataService.user" [occupancy]="selectedRoom['Occupancy']"
-(timeScaleChanged)="setCalendar(selectedRoom['Email'], $event)">
+<app-header [user]="this.dataService.user" [occupancy]="selectedRoom['Occupancy']">
 </app-header>
 
 <div class="container">
-  <app-calendar [timeScale]='timescale' [events]='events'>
+  <app-calendar [timeScale]="'Week'" [events]="events">
   </app-calendar>
 
   <br>

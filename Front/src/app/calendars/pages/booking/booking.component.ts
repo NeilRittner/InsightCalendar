@@ -45,20 +45,6 @@ export class BookingComponent implements OnInit {
   /**
    *
    */
-  getUser(): void {
-    this.httpService.getUser()
-      .subscribe(user => {
-        // Do something else?
-        this.dataService.user = user;
-      }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
-      });
-  }
-
-  /**
-   *
-   */
   initTime(): void {
     const now = new Date();
     const min = now.getMinutes() + 5 - (now.getMinutes() % 5);
@@ -226,7 +212,7 @@ export class BookingComponent implements OnInit {
 
   ngOnInit() {
     if (JSON.stringify(this.dataService.user) === '{}') {
-      this.getUser();
+      this.dataService.getUser();
     }
     this.initTime();
     this.getRooms();

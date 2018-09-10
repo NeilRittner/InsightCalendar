@@ -1,6 +1,6 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
-import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
-import { formatDate } from '../../../../../node_modules/@angular/common';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { formatDate } from '@angular/common';
 import { FormControl } from '@angular/forms';
 
 import { CalendarsService } from '../../shared/httpService/calendars.service';
@@ -15,7 +15,7 @@ import { ActivatedRoute } from '@angular/router';
   templateUrl: './room.component.html',
   styleUrls: ['./room.component.css']
 })
-export class RoomComponent implements OnInit {
+export class RoomComponent implements OnInit, OnDestroy {
   @ViewChild('scan') scanElement: ElementRef;
 
   constructor(
@@ -25,43 +25,41 @@ export class RoomComponent implements OnInit {
     private route: ActivatedRoute
   ) { }
 
-  timescale: string;
+  // Room Information
+  selectedRoom = []; // Array with the 'Name', the 'Email', and the 'Occupancy' of the selected room
+
+  // Events
   events = [];
-  idCardControl = new FormControl();  // FormControl for scan
-  selectedRoom = []; // Name and Email of the selected room
   nextEvent: Array<any>;
   nextEventPos: number;
-  timeBeforeRemove = 1; // Time in minutes before cancel an event
-  months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
-    'August', 'September', 'October', 'November', 'December'];
+
+  // Time and timers
   timeToWaitCancel: number;
   timeToWaitStart: number;
-  numberScan: number;
+  timeBeforeRemoveMinutes = 1; // Time in minutes before cancel an event
+  timeBeforeRemoveMilliSeconds = this.timeBeforeRemoveMinutes * 60 * 1000;
+  timeRefreshMiutes = 10;
+  timeOutRefresh = this.timeRefreshMiutes * 60 * 1000;
   timeOutCancel;
   timeOutStart;
 
-  // Sockets
+  // Others
   insertEventConnection;
-
-
-  getUser(): void {
-    this.httpService.getUser()
-      .subscribe(user => {
-        this.dataService.user = user;
-      }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
-      });
-  }
+  idCardControl = new FormControl();  // FormControl for scan
+  numberScan: number;
+  months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+    'August', 'September', 'October', 'November', 'December'];
 
 
   setRoom(room): void {
     const roomName = this.transformRoomName(room);
+    this.removeSockets();
     this.httpService.getRoomInformation(roomName)
       .subscribe(dataRoom => {
         this.selectedRoom = dataRoom;
         this.scanElement.nativeElement.focus();
         this.setCalendar(this.selectedRoom['Email']);
+        this.refreshCalendarTimer();
         this.setupSocket();
       });
   }
@@ -79,17 +77,17 @@ export class RoomComponent implements OnInit {
   }
 
 
-  setCalendar(roomEmail, timescale?: string): void {
-    this.getCalendar(roomEmail, timescale)
+  setCalendar(roomEmail): void {
+    this.getCalendar(roomEmail)
       .then(data => {
         this.calendarTreatments(data);
       });
   }
 
 
-  getCalendar(calendarId, timeScale?: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.httpService.getCalendar(calendarId, timeScale)
+  getCalendar(calendarId): Promise<any> {
+    return new Promise((resolve) => {
+      this.httpService.getCalendar(calendarId)
         .subscribe(data => {
           resolve(data);
         }, (err: HttpErrorResponse) => {
@@ -100,28 +98,32 @@ export class RoomComponent implements OnInit {
   }
 
 
+  refreshCalendarTimer(): void {
+    setTimeout(() => {
+      this.setCalendar(this.selectedRoom['Email']);
+      this.refreshCalendarTimer();
+    }, this.timeOutRefresh);
+  }
+
+
   calendarTreatments(data: any): void {
+    this.events = [];
     this.nextEvent = [];
+
     for (let i = 0; i < data['events'].length; i++) {
       const event = data['events'][i];
       event['date'] = this.extractDate(event['start']['dateTime']);
       event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
       event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
 
-      const now = new Date();
-      const startTimeArr = event['start']['dateTime'].split(':');
-      const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
-      const nowBisTime = now.getTime() - this.timeBeforeRemove * 60 * 1000;
-      const dateArr = event['date'].split(', ');
-      const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-      dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
-
-      if (this.nextEvent.length === 0 && nowBisTime < startTime) {
+      const nowShiftTime = new Date().getTime() - this.timeBeforeRemoveMilliSeconds;
+      const startTime = this.determineStartTime(event);
+      if (this.nextEvent.length === 0 && nowShiftTime < startTime) {
         event['type'] = 'warning';
         this.nextEvent = event;
         this.nextEventPos = i;
       } else {
-        if (nowBisTime <= startTime) {
+        if (nowShiftTime <= startTime) {
           event['type'] = 'warning';
         } else {
           event['type'] = 'danger';
@@ -132,33 +134,23 @@ export class RoomComponent implements OnInit {
     if (this.nextEvent.length !== 0) {
       this.organizerIsPresent(this.nextEvent)
         .then(bool => {
-          let now = new Date();
-          let startTimeArr = this.nextEvent['start']['dateTime'].split(':');
-          let startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
-          let dateArr = this.nextEvent['date'].split(', ');
-          let startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-            dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
-
-          if (bool === false || (bool === true && now.getTime() < startTime)) {
-            this.timeToWaitStart = startTime - now.getTime();
+          const nowTime = new Date().getTime();
+          let startTime = this.determineStartTime(this.nextEvent);
+          if (bool === false || (bool === true && nowTime < startTime)) {
+            this.timeToWaitStart = startTime - nowTime;
             if (this.timeToWaitStart < 0) {
               this.timeToWaitStart = 0;
             }
             this.startTimer(startTime);
           } else {
-            if (this.events[this.nextEventPos + 1]) {
-              this.events[this.nextEventPos]['type'] = 'danger';
-              this.events[this.nextEventPos + 1]['type'] = 'warning';
-              this.nextEvent = this.events[this.nextEventPos + 1];
+            if (data['events'][this.nextEventPos + 1]) {
+              data['events'][this.nextEventPos]['type'] = 'danger';
+              data['events'][this.nextEventPos + 1]['type'] = 'warning';
+              this.nextEvent = data['events'][this.nextEventPos + 1];
               this.nextEventPos = this.nextEventPos + 1;
 
-              now = new Date();
-              startTimeArr = this.nextEvent['start']['dateTime'].split(':');
-              startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
-              dateArr = this.nextEvent['date'].split(', ');
-              startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-                dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
-              this.timeToWaitStart = startTime - now.getTime();
+              startTime = this.determineStartTime(this.nextEvent);
+              this.timeToWaitStart = startTime - nowTime;
               if (this.timeToWaitStart < 0) {
                 this.timeToWaitStart = 0;
               }
@@ -168,25 +160,28 @@ export class RoomComponent implements OnInit {
               this.nextEventPos = -1;
             }
           }
-
-          this.timescale = data['timescale'];
           this.events = data['events'];
         });
     } else {
-      this.timescale = data['timescale'];
       this.events = data['events'];
     }
   }
 
 
+  determineStartTime(event): number {
+    const startTimeArr = event['start']['dateTime'].split(':');
+    const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
+    const dateArr = event['date'].split(', ');
+    const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+      dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
+
+    return startTime;
+  }
+
+
   organizerIsPresent(event): Promise<any> {
     return new Promise((resolve, reject) => {
-      let orga;
-      if (event['creator']) {
-        orga = event['creator']['email'];
-      } else {
-        orga = event['organizer']['email'];
-      }
+      const orga = event['creator'] ? event['creator']['email'] : event['organizer']['email'];
       this.httpService.organizerIsPresent(orga, event['id'], this.selectedRoom['Name'])
       .subscribe(response => {
         if (response === 'yes') {
@@ -221,12 +216,23 @@ export class RoomComponent implements OnInit {
     }, this.timeToWaitStart);
   }
 
+
   cancelTimer(startTime): void {
     const nowTime = new Date().getTime();
-    const timeToWaitCancel = startTime - nowTime + this.timeBeforeRemove * 60 * 1000;
+    const timeToWaitCancel = startTime - nowTime + this.timeBeforeRemoveMilliSeconds;
     this.timeOutCancel = setTimeout(() => {
       this.cancelEvent(this.nextEvent, this.selectedRoom['Email']);
     }, timeToWaitCancel);
+  }
+
+
+  clearTimers(): void {
+    if (this.timeOutStart) {
+      clearTimeout(this.timeOutStart);
+    }
+    if (this.timeOutCancel) {
+      clearTimeout(this.timeOutCancel);
+    }
   }
 
 
@@ -286,9 +292,7 @@ export class RoomComponent implements OnInit {
 
 
   newNextEvent(): void {
-    if (this.timeOutCancel) {
-      clearTimeout(this.timeOutCancel);
-    }
+    this.clearTimers();
     if (this.events[this.nextEventPos + 1]) {
       this.nextEvent = this.events[this.nextEventPos + 1];
       this.nextEventPos = this.nextEventPos + 1;
@@ -321,11 +325,9 @@ export class RoomComponent implements OnInit {
           if (bool === false) {
             this.httpService.updateEndEvent(currentEvent['organizer']['email'], currentEvent['id'], new Date())
               .subscribe(eventUpdated => {
-                eventUpdated['date'] = this.extractDate(eventUpdated['start']['dateTime']);
-                eventUpdated['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
-                eventUpdated['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
-                this.events[posInEvents] = eventUpdated;
-                console.log(this.events);
+                this.events[posInEvents]['date'] = this.extractDate(eventUpdated['start']['dateTime']);
+                this.events[posInEvents]['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
+                this.events[posInEvents]['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
                 this.events = this.events.slice();
               }, (err: HttpErrorResponse) => {
                 // console.log(err['status']);
@@ -341,7 +343,7 @@ export class RoomComponent implements OnInit {
     this.httpService.cancelEvent(eventToCancel['organizer']['email'], eventToCancel['id'], roomEmail)
       .subscribe(eventRemoved => {
         if (this.selectedRoom && this.isRoom(this.selectedRoom['Email'], eventRemoved['attendees'])) {
-          this.removeEvent(eventRemoved['id'], this.timescale);
+          this.removeEvent(eventRemoved['id']);
         }
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);
@@ -361,12 +363,8 @@ export class RoomComponent implements OnInit {
       const event = this.events[i];
       const eventStartArr = event['start']['dateTime'].split(':');
       const eventEndArr = event['end']['dateTime'].split(':');
-      const eventStartHour = eventStartArr[0];
-      const eventStartMoment = eventStartArr[1].split(' ')[1];
-      const eventStartHour24 = this.convert12To24(eventStartHour, eventStartMoment);
-      const eventEndHour = eventEndArr[0];
-      const eventEndMoment = eventEndArr[1].split(' ')[1];
-      const eventEndHour24 = this.convert12To24(eventEndHour, eventEndMoment);
+      const eventStartHour24 = this.convert12To24(eventStartArr[0], eventStartArr[1].split(' ')[1]);
+      const eventEndHour24 = this.convert12To24(eventEndArr[0], eventEndArr[1].split(' ')[1]);
       const dateArr = event['date'].split(', ');
       const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
         dateArr[1].split(' ')[1], eventStartHour24, parseInt(eventStartArr[1].split(' ')[0], 10)).getTime();
@@ -386,32 +384,27 @@ export class RoomComponent implements OnInit {
   setupSocket(): void {
     this.insertEventConnection = this.socketsService.eventInserted()
       .subscribe(data => {
-        if (this.selectedRoom && this.isRoom(this.selectedRoom['Email'], data['event']['attendees'])) {
+        if (this.isRoom(this.selectedRoom['Email'], data['event']['attendees'])) {
           this.getCalendar(this.selectedRoom['Email'])
             .then(dataGet => {
-              if (this.timeOutStart) {
-                clearTimeout(this.timeOutStart);
-              }
-              if (this.timeOutCancel) {
-                clearTimeout(this.timeOutCancel);
-              }
+              this.clearTimers();
+
               let newEvents;
-
-              if (dataGet['timescale'] === 'Month' || (dataGet['timescale'] === 'Week' && data['timescale'] === 'Day')) {
-                dataGet['timescale'] = data['timescale'];
-              }
-
-              const newEventStartTime = new Date(data['event']['start']['dateTime'].split('+')[0]).getTime();
               let index = -1;
-              for (let i = 0; i < this.events.length; i++) {
-                const event = this.events[i];
+              const newEventStartTime = new Date(data['event']['start']['dateTime'].split('+')[0]).getTime();
+
+              for (let i = 0; i < dataGet['events'].length; i++) {
+                const event = dataGet['events'][i];
                 const eventStartTime = new Date(event['start']['dateTime'].split('+')[0]).getTime();
+                if (event['id'] === data['event']['id'] ) {
+                  break;
+                }
                 if (eventStartTime > newEventStartTime) {
                   index = i;
                 }
               }
               if (index === -1) {
-                index = this.events.length;
+                index = dataGet['events'].length;
               }
 
               newEvents = this.events.slice(0, index);
@@ -437,16 +430,15 @@ export class RoomComponent implements OnInit {
   }
 
 
-  removeEvent(eventId, timescale): void {
-    this.getCalendar(this.selectedRoom['Email'], timescale)
+  removeEvent(eventId): void {
+    this.getCalendar(this.selectedRoom['Email'])
       .then(data => {
         const newEvents = this.removeEventInList(data['events'], eventId);
-        if (timescale === 'Month' || newEvents.length !== 0) {
-          data['timescale'] = timescale;
+        if (newEvents.length !== 0) {
           data['events'] = newEvents;
           this.calendarTreatments(data);
         } else {
-          this.removeEvent(eventId, this.followingTimescale(timescale));
+          this.removeEvent(eventId);
         }
       });
   }
@@ -466,22 +458,23 @@ export class RoomComponent implements OnInit {
   }
 
 
-  followingTimescale(timescale: string): string {
-    if (timescale === 'Month' || timescale === 'Week') {
-      return 'Month';
-    } else {
-      return 'Week';
+  removeSockets(): void {
+    if (this.insertEventConnection !== undefined) {
+      this.insertEventConnection.unsubscribe();
     }
   }
 
 
   ngOnInit() {
     if (JSON.stringify(this.dataService.user) === '{}') {
-      this.getUser();
+      this.dataService.getUser();
     }
     this.route.params.subscribe(params => {
       this.setRoom(params['roomName']);
     });
   }
 
+  ngOnDestroy() {
+    this.removeSockets();
+  }
 }

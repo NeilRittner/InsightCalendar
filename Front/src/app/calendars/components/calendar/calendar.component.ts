@@ -13,7 +13,7 @@ export class CalendarComponent implements OnInit, OnChanges {
   @Input() events: Array<any>;
   days: Array<any>;
   indexDay: number;
-  hours = ['9am', '10am', '11am', '12pm', '13pm', '14pm', '15pm', '16pm', '17pm'];
+  hours = ['9am', '10am', '11am', '12pm', '1pm', '2pm', '3pm', '4pm', '5pm'];
   nbHours = this.hours.length;
   weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   numberOfWeeksInMonth: number;
@@ -43,10 +43,10 @@ export class CalendarComponent implements OnInit, OnChanges {
         startTimes[1] = parseInt(startTimes[1].split(' ')[0], 10);
         endTimes[1] = parseInt(endTimes[1].split(' ')[0], 10);
 
-        /* ValueEvent */
-        let valueEvent = this.calculValueEvent(startTimes[0], endTimes[0], startTimes[1], endTimes[1]);
 
-        if (valueEvent > 0) {
+        if (indexInDays !== -1 && indexInDays !== 5) {
+          /* ValueEvent */
+          let valueEvent = this.calculValueEvent(startTimes[0], endTimes[0], startTimes[1], endTimes[1]);
           /* ValueBefore */
           if (!exEventLongDate || exEventLongDate.getDate() !== eventLongDate.getDate()) {
             exEventLongDate = eventLongDate;
@@ -66,37 +66,21 @@ export class CalendarComponent implements OnInit, OnChanges {
             valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
           }
 
-          if (valueAfter > 0 || (this.events[i + 1] && this.events[i + 1]['date'] !== event['date'])) {
-            this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+          if (valueEvent > 0) {
+            if (valueAfter > 0 || (this.events[i + 1] && this.events[i + 1]['date'] !== event['date'])) {
+              this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+              this.pushInDays(indexInDays, valueAfter, 'success', '');
+            } else if (valueAfter === 0 && endTimes[0] >= 18) {
+              this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+            } else {
+              const valueInterEvent = 0.15;
+              valueEvent = valueEvent - valueInterEvent;
+              this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+              this.pushInDays(indexInDays, valueInterEvent, 'info', '');
+            }
+          } else {
             this.pushInDays(indexInDays, valueAfter, 'success', '');
-          } else if (valueAfter === 0 && endTimes[0] >= 18) {
-            this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
-          } else {
-            const valueInterEvent = 0.2;
-            valueEvent = valueEvent - valueInterEvent;
-            this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
-            this.pushInDays(indexInDays, valueInterEvent, 'info', '');
           }
-        } else if (valueEvent === 0 && startTimes[0] >= 9 && endTimes[0] < 18) {
-          /* ValueBefore */
-          if (!exEventLongDate || exEventLongDate.getDate() !== eventLongDate.getDate()) {
-            exEventLongDate = eventLongDate;
-            const valueBefore = ((startTimes[0] - 9) * (100 / this.nbHours)) + (startTimes[1] * (100 / (this.nbHours * 60)));
-            if (valueBefore > 0) {
-              this.pushInDays(indexInDays, valueBefore, 'success', '');
-            }
-          }
-
-          /* ValueAfter */
-          let valueAfter;
-          if (this.events[i + 1] && this.events[i + 1]['date'] === event['date']) {
-            const startTimesNext = this.events[i + 1]['start']['dateTime'].split(':');
-            startTimesNext[0] = this.adaptTime(startTimesNext[0], startTimesNext[1].split(' ')[1]);
-            valueAfter = this.calculValueAfter(startTimesNext[0], endTimes[0], startTimesNext[1].split(' ')[0], endTimes[1]);
-          } else {
-            valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
-          }
-          this.pushInDays(indexInDays, valueAfter, 'success', '');
         }
       }
       this.completeEmptyDays();
@@ -215,10 +199,10 @@ export class CalendarComponent implements OnInit, OnChanges {
   }
 
   completeEmptyDays(): void {
-    for (let j = 0; j < this.days.length; j++) {
-      const day = this.days[j];
+    for (let i = 0; i < this.days.length; i++) {
+      const day = this.days[i];
       if (day.length === 0) {
-        this.pushInDays(j, 100, 'success', '');
+        this.pushInDays(i, 100, 'success', '');
       }
     }
   }

@@ -208,24 +208,13 @@ app.get('/currentUser', function (req, res) {
 app.get('/userCalendar', function (req, res) {
   authClient.setCredentials(req.session.tokens);
 
-  if (req.query.timescale) {
-    calendars.getCalendar(authClient, req.query.calendarId, req.query.timescale)
-      .then(events => {
-        res.send(events);
-      })
-      .catch(err => {
-        res.status(500).send(err);
-      });
-  } 
-  else {
-    calendars.getCalendar(authClient, req.query.calendarId)
-      .then(events => {
-        res.send(events);
-      })
-      .catch(err => {
-        res.status(500).send(err);
-      });
-  }
+  calendars.getCalendar(authClient, req.query.calendarId, req.query.timescale)
+    .then(events => {
+      res.send(events);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
 });
 
 

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
 import { formatDate } from '../../../../../node_modules/@angular/common';
 
@@ -11,7 +11,7 @@ import { SocketsService } from './../../shared/socketsService/sockets.service';
   templateUrl: './user.component.html',
   styleUrls: ['./user.component.css']
 })
-export class UserComponent implements OnInit {
+export class UserComponent implements OnInit, OnDestroy {
 
   constructor(
     private httpService: CalendarsService,
@@ -19,23 +19,17 @@ export class UserComponent implements OnInit {
     private socketsService: SocketsService
   ) { }
 
+  // Global information
   timescale: string;
   events = [];
+
+  // Time
+  timeRefreshMiutes = 10;
+  timeOutRefresh = this.timeRefreshMiutes * 60 * 1000;
+
+  // Sockets
   removeEventConnection;
   insertEventConnection;
-
-  getUser(): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.httpService.getUser()
-        .subscribe(user => {
-          this.dataService.user = user;
-          resolve('');
-        }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
-        });
-    });
-  }
 
   extractDate(dateISOS: string): string {
     return formatDate(dateISOS, 'fullDate', 'en-US');
@@ -62,6 +56,13 @@ export class UserComponent implements OnInit {
           // 500: Internal Error Component
         });
     });
+  }
+
+  refreshCalendarTimer(): void {
+    setTimeout(() => {
+      this.setCalendar();
+      this.refreshCalendarTimer();
+    }, this.timeOutRefresh);
   }
 
   calendarTreatments(data: any): void {
@@ -170,10 +171,19 @@ export class UserComponent implements OnInit {
 
   ngOnInit() {
     if (JSON.stringify(this.dataService.user) === '{}') {
-      this.getUser();
+      this.dataService.getUser();
     }
     this.setCalendar();
     this.setupSockets();
+  }
+
+  ngOnDestroy() {
+    if (this.insertEventConnection !== undefined) {
+      this.insertEventConnection.unsubscribe();
+    }
+    if (this.removeEventConnection !== undefined) {
+      this.removeEventConnection.unsubscribe();
+    }
   }
 
 }

@@ -21,10 +21,12 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  getCalendar(calendarId, timeScale): Observable<any> {
+  getCalendar(calendarId, timeScale?: string): Observable<any> {
     let url = `${environment.serveur_url}api/userCalendar?calendarId=${calendarId}`;
     if (timeScale) {
       url = url + `&timescale=${timeScale}`;
+    } else {
+      url = url + `&timescale=Week`;
     }
     const httpOptions = { withCredentials: true };
     return this.http

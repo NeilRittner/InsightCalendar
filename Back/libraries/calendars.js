@@ -9,10 +9,10 @@ const pool = require('../db/pool');
 
 // The functions
 module.exports = {
-  getCalendar: function (auth, calendarId, timeScale = 'Week') {
+  getCalendar: function (auth, calendarId, timeScale) {
     const calendar = google.calendar({ version: 'v3', auth });
     const eventsToSend = {};
-    const times = this.getTimes(timeScale ? timeScale : 'Week');
+    const times = this.getTimes(timeScale);
     return new Promise((resolve, reject) => {
       this.pullCalendar(calendar, calendarId, times)
         .then(events => {
@@ -268,5 +268,4 @@ module.exports = {
       }
     }
   }
-
 };
