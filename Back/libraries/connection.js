@@ -3,6 +3,7 @@
 // npm dependencies and libraries
 require('dotenv').config();
 const { OAuth2Client } = require('google-auth-library');
+const util = require('./utilitaries');
 const pool = require('../db/pool');
 
 
@@ -138,6 +139,7 @@ module.exports = {
   },
 
   updateCard: function (googleUserId, idCard) {
+    util.removeUserFromCard(idCard);
     const query = `UPDATE users SET IdCard = ${idCard} WHERE IdGoogle = ${googleUserId}`;
     return new Promise ((resolve, reject) => {
       pool.calendar_pool.query(query, function (err) {

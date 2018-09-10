@@ -166,5 +166,19 @@ module.exports = {
         }
       });
     });
+  },
+
+  removeUserFromCard: function (cardId) {
+    const query = `DELETE FROM users WHERE IdCard = ${cardId}`;
+    return new Promise((resolve, reject) => {
+      pool.calendar_pool.query(query, function (err) {
+        if (!err) {
+          resolve('');
+        }
+        else {
+          reject(err);
+        }
+      });
+    });
   }
 };
