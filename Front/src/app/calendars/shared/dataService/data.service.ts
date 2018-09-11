@@ -11,13 +11,16 @@ export class DataService {
 
   public user = {};
 
-  getUser(): void {
-    this.httpService.getUser()
-      .subscribe(user => {
-        this.user = user;
-      }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
-      });
+  getUser(): Promise<any> {
+    return new Promise((resolve) => {
+      this.httpService.getUser()
+        .subscribe(user => {
+          this.user = user;
+          resolve();
+        }, (err: HttpErrorResponse) => {
+          // console.log(err['status']);
+          // 500: Internal Error Component
+        });
+    });
   }
 }
