@@ -26,6 +26,7 @@ export class BookingComponent implements OnInit {
   title: string;  // Title of the event
   startDate: Date;  // Start date of the event
   endDate: Date;  // End date of the event
+  eventLength = 60; // Length of the event, in minutes
 
   roomsControl = new FormControl(); // FormControl for room
   roomsAutocomplete = []; // Autocomplete of rooms
@@ -42,6 +43,12 @@ export class BookingComponent implements OnInit {
 
   faTimes = faTimes;  // Icon to remove a participant or clear the room
 
+    init(): void {
+      this.initTime();
+      this.getRooms();
+      this.getAllUsers();
+    }
+
   /**
    *
    */
@@ -52,8 +59,22 @@ export class BookingComponent implements OnInit {
     this.startDate.setMinutes(min);
     this.startDate.setSeconds(0);
     this.endDate = new Date();
-    this.endDate.setMinutes(min);
+    this.endDate.setMinutes(min + this.eventLength);
     this.endDate.setSeconds(0);
+  }
+
+  /**
+   *
+   */
+  changeEnd(): void {
+    this.endDate = new Date(this.startDate.getTime() + this.eventLength * 60 * 1000);
+  }
+
+  /**
+   *
+   */
+  changeEventLength(): void {
+    this.eventLength = (this.endDate.getTime() - this.startDate.getTime()) / (60 * 1000);
   }
 
   /**
@@ -109,18 +130,15 @@ export class BookingComponent implements OnInit {
    */
   setCoOrga(coOrga): void {
     this.coOrga = coOrga;
-    const index = this.attendeesAutocomplete.findIndex(att => att['Email'] === coOrga['Email']);
-    this.attendeesAutocomplete.splice(index, 1);
-    this.setFilteredAttendeesAutcomplete();
-    this.attendeesControl.reset();
+    this.addAttendee(coOrga);
   }
 
   /**
    *
    */
   clearCoOrga(): void {
-    this.attendeesAutocomplete.push(this.coOrga);
-    this.setFilteredAttendeesAutcomplete();
+    this.removeAttendee(this.coOrga);
+    this.coOrga = null;
     this.coOrgaControl.reset();
   }
 
@@ -132,6 +150,7 @@ export class BookingComponent implements OnInit {
       .subscribe(users => {
         this.attendeesAutocomplete = users;
         this.setFilteredAttendeesAutcomplete();
+        this.addAttendee(this.dataService.user);
       }, (err: HttpErrorResponse) => {
         // console.log(err['status']);
         // 500: Internal Error Component
@@ -186,7 +205,7 @@ export class BookingComponent implements OnInit {
    *
    */
   createEvent(): void {
-    if (this.startDate < this.endDate) {
+    if (this.eventLength > 0) {
       const event = {
         title: this.title,
         startDate: this.startDate,
@@ -197,26 +216,31 @@ export class BookingComponent implements OnInit {
         organizer2: this.coOrga
       };
       this.httpService.postEvent(event)
-        .subscribe(() => {
-          this.router.navigate(['/user']);
+        .subscribe(data => {
+          if (data) {
+            console.log(data);
+          } else {
+            this.router.navigate(['/user']);
+          }
         }, (err: HttpErrorResponse) => {
           // console.log(err['status']);
           // 500: Internal Error Component
         });
     } else {
-      // endDate < startDate
+      // Event finit avant de commencer
       // Do something to display the error
-      console.log('issue in the date');
     }
   }
 
   ngOnInit() {
     if (JSON.stringify(this.dataService.user) === '{}') {
-      this.dataService.getUser();
+      this.dataService.getUser()
+        .then(() => {
+          this.init();
+        });
+    } else {
+      this.init();
     }
-    this.initTime();
-    this.getRooms();
-    this.getAllUsers();
   }
 
 }

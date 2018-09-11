@@ -238,9 +238,14 @@ app.get('/nameFromEmail', function (req, res) {
 app.post('/createEvent', function (req, res) {
   authClient.setCredentials(req.session.tokens);
   calendars.createEvent(authClient, req.body)
-    .then(eventInserted => {
-      ev.emit('eventInserted', eventInserted);
-      res.status(200).send();
+    .then(data => {
+      if (data) {
+        ev.emit('eventInserted', data);
+        res.status(200).send();
+      }
+      else {
+        res.status(200).send('Room not available');
+      }
     })
     .catch(err => {
       res.status(500).send(err);

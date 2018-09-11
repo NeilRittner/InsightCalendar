@@ -9,19 +9,25 @@
     </div>
     
     <div class="row">
+      <p> Start </p>
       <div class="form-group">
         <input type="text" class="form-control" #dp="bsDatepicker" bsDatepicker 
         [(ngModel)]="startDate" name="startDate" 
         [bsConfig]="{ dateInputFormat: 'MMMM D, YYYY', containerClass: 'theme-dark-blue' }" required>
       </div>
-      <timepicker [(ngModel)]="startDate" name="startTime" [showSpinners]="hideSpinners"></timepicker>
+      <timepicker [(ngModel)]="startDate" name="startDate" [showSpinners]="hideSpinners" (mousewheel)="changeEnd()">
+      </timepicker>
+    </div>
 
+    <div class="row">
+      <p> End </p>
       <div class="form-group">
         <input type="text" class="form-control" #dp="bsDatepicker" bsDatepicker 
         [(ngModel)]="endDate" name="endDate" 
         [bsConfig]="{ dateInputFormat: 'MMMM D, YYYY', containerClass: 'theme-dark-blue' }" required>
       </div>
-      <timepicker [(ngModel)]="endDate" name="endDate" [showSpinners]="hideSpinners"></timepicker>
+      <timepicker [(ngModel)]="endDate" name="endDate" [showSpinners]="hideSpinners" (mousewheel)="changeEventLength()">
+      </timepicker>
     </div>
 
     <div>
@@ -34,7 +40,7 @@
           </mat-option>
         </mat-autocomplete>
       </mat-form-field>
-      <fa-icon class="cursor" [icon]="faTimes" (click)="clearRoom()"></fa-icon>
+      <fa-icon *ngIf="selectedRoom" class="cursor" [icon]="faTimes" (click)="clearRoom()"></fa-icon>
     </div>
 
     <div>
@@ -48,7 +54,7 @@
           </mat-option>
         </mat-autocomplete>
       </mat-form-field>
-      <fa-icon class="cursor" [icon]="faTimes" (click)="clearCoOrga()"></fa-icon>
+      <fa-icon *ngIf="coOrga" class="cursor" [icon]="faTimes" (click)="clearCoOrga()"></fa-icon>
     </div>
 
     <div>
@@ -66,7 +72,8 @@
       <p>Participants</p>
       <p *ngFor="let att of attendeesList">
         {{ att['FirstName'] }} {{ att['LastName']}} : {{ att['Email']}}
-        <fa-icon class="cursor" [icon]="faTimes" (click)="removeAttendee(att)"></fa-icon>
+        <fa-icon *ngIf="(att['Email'] !== this.dataService.user['Email'] && att['Email'] !== coOrga['Email'])"
+        class="cursor" [icon]="faTimes" (click)="removeAttendee(att)"></fa-icon>
       </p>
     </div>
 

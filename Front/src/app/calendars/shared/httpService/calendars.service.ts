@@ -60,7 +60,7 @@ export class CalendarsService {
 
   postEvent(event): Observable<any> {
     const url = `${environment.serveur_url}api/createEvent`;
-    const httpOptions = { withCredentials: true };
+    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
     return this.http
       .post(url, event, httpOptions)
       .pipe(catchError(err => throwError(err)));

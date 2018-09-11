@@ -68,28 +68,72 @@ module.exports = {
 
   createEvent: function (auth, eventInfo) {
     const calendar = google.calendar({ version: 'v3', auth });
-
     return new Promise((resolve, reject) => {
       const that = this;
-      calendar.events.insert({
-        auth: auth,
-        calendarId: 'primary',
-        resource: this.structureEvent(eventInfo)
-      }, function (err, event) {
-        if (err) {
-          reject (err);
-        }
-        else {
-          that.insertEventDB(event['data'], eventInfo['organizer2'])
-            .then(() => {
-              resolve(event['data']);
-            })
-            .catch(err => {
-              reject(err);
+      this.verifyRoomAvailability(calendar, eventInfo)
+        .then(bool => {
+          if (bool) {
+            calendar.events.insert({
+              auth: auth,
+              calendarId: 'primary',
+              resource: this.structureEvent(eventInfo)
+            }, function (err, event) {
+              if (err) {
+                reject(err);
+              }
+              else {
+                that.insertEventDB(event['data'], eventInfo['organizer2'])
+                  .then(() => {
+                    resolve(event['data']);
+                  })
+                  .catch(err => {
+                    reject(err);
+                  });
+              }
             });
-        }
-      });
+          }
+          else {
+            resolve(null);
+          }
+        })
+        .catch(err => {
+          reject(err);
+        });
     });
+  },
+
+  verifyRoomAvailability: function (calendar, eventInfo) {
+    return new Promise((resolve, reject) => {
+      const times = this.getTimes('Week');
+      this.pullCalendar(calendar, eventInfo['room']['Email'], times)
+        .then(roomEvents => {
+          let bool = true;
+          for (let i = 0; i < roomEvents.length; i++) {
+            const event = roomEvents[i];
+            const startEvent = new Date(event['start']['dateTime']);
+            const endEvent = new Date(event['end']['dateTime']);
+            const startNew = new Date(eventInfo['startDate']);
+            const endNew = new Date(eventInfo['endDate']);
+            if (this.isSameDay(startEvent, startNew) || this.isSameDay(endEvent, endNew)) {
+              if (endNew > startEvent && startNew < endEvent) {
+                bool = false;
+              }
+            }
+          }
+          resolve(bool);
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  },
+
+  isSameDay: function (date1, date2) {
+    if (date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate()) {
+      return true;
+    } else {
+      return false;
+    }
   },
 
   structureEvent: function (eventInfo) {
