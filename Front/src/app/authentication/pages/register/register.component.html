@@ -1,5 +1,8 @@
 <div class="container">
   <button (click)="enterGoogleAccount()"> Sign in with Google </button>
+  <div *ngIf="fakeToken">
+    Failure in the authentication of your Google token
+  </div>
   
   <p> and </p>
   

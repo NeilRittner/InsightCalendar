@@ -7,24 +7,8 @@ const pool = require('../db/pool');
 
 // The functions
 module.exports = {
-  getNameFromEmail: function (email) {
-    const query = `SELECT FirstName, LastName FROM users WHERE Email = '${email}'`;
-
-    return new Promise((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err, row) {
-        if (!err) {
-          resolve(row[0]);
-        }
-        else {
-          reject(err);
-        }
-      });
-    });
-  },
-
   getAllRoom: function () {
     const query = `SELECT * FROM rooms`;
-
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, rows) {
         if (!err) {
@@ -39,7 +23,6 @@ module.exports = {
 
   getAllUsers: function () {
     const query = `SELECT FirstName, LastName, Email FROM users`;
-
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, rows) {
         if (!err) {
@@ -54,29 +37,14 @@ module.exports = {
 
   getUserPosition: function (userIdCard) {
     const query = `SELECT Position FROM users WHERE IdCard = ${userIdCard}`;
-
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
         if (!err) {
-          resolve(row[0]['Position']);
-        }
-        else {
-          reject(err);
-        }
-      });
-    });
-  },
-
-  getUserPositionFromEmail: function (userEmail) {
-    const query = `SELECT Position FROM users WHERE Email = '${userEmail}'`;
-    return new Promise((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err, row) {
-        if (!err) {
-          if (row[0] === undefined) {
-            resolve(null);
+          if (row[0]) {
+            resolve(row[0]['Position']);
           }
           else {
-            resolve(row[0]['Position']);
+            resolve(undefined);
           }
         }
         else {
@@ -100,27 +68,13 @@ module.exports = {
     });
   },
 
-  getUserMailFromCard: function (idCard) {
-    const query = `SELECT Email FROM users WHERE IdCard = '${idCard}'`;
-    return new Promise((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err, row) {
-        if (!err) {
-          resolve(row[0]['Email']);
-        }
-        else {
-          reject(err);
-        }
-      });
-    });
-  },
-
-  organizerIsPresent: function (organizerEmail, eventId, roomName) {
+  organizersAttendance: function (organizerEmail, eventId, roomName) {
     return new Promise((resolve, reject) => {
       this.getSecondOrganizer(eventId)
-        .then(coOrgaEMail => {
+        .then(orga2Email => {
           let query = `SELECT Position FROM users WHERE Email = '${organizerEmail}'`;
-          if (coOrgaEMail) {
-            query = query + `OR Email = '${coOrgaEMail}'`
+          if (orga2Email) {
+            query = query + `OR Email = '${orga2Email}'`
           }
           pool.calendar_pool.query(query, function (err, row) {
             if (!err) {
@@ -173,7 +127,30 @@ module.exports = {
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err) {
         if (!err) {
-          resolve('');
+          resolve();
+        }
+        else {
+          reject(err);
+        }
+      });
+    });
+  },
+
+  getTokensFromEmail: function (userEmail) {
+    const query = `SELECT AccessToken, RefreshToken FROM users WHERE Email = '${userEmail}'`;
+    return new Promise((resolve, reject) => {
+      pool.calendar_pool.query(query, function (err, row) {
+        if (!err) {
+          if (row[0]['AccessToken'] !== null && row[0]['RefreshToken'] !== null) {
+            const tokens = {
+              access_token: row[0]['AccessToken'],
+              refresh_token: row[0]['RefreshToken']
+            };
+            resolve(tokens);
+          }
+          else {
+            resolve(null);
+          }
         }
         else {
           reject(err);

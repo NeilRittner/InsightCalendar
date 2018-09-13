@@ -12,7 +12,7 @@ module.exports = {
         .then(() => {
           this.updateRoomOccupancy(scanPosition, move)
             .then(() => {
-              resolve('Positon and Occupancy updated');
+              resolve();
             })
             .catch(err => {
               reject(err);
@@ -36,7 +36,7 @@ module.exports = {
 
       pool.calendar_pool.query(query, function (err) {
         if (!err) {
-          resolve('Row updated');
+          resolve();
         }
         else {
           reject(err);
@@ -57,22 +57,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err) {
         if (!err) {
-          resolve('Row updated');
-        }
-        else {
-          reject(err);
-        }
-      });
-    });
-  },
-
-  getRoomOccupancy: function (roomName) {
-    const query = `SELECT Occupancy FROM rooms WHERE Name = '${roomName}'`;
-
-    return new Promise((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err, row) {
-        if (!err) {
-          resolve(row[0]);
+          resolve();
         }
         else {
           reject(err);
@@ -85,6 +70,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       util.getUserPosition(userIdCard)
         .then(exUserPos => {
+          if (exUserPos !== undefined) {
             if (exUserPos === scanPosition) {
               resolve('out');
             }
@@ -100,6 +86,10 @@ module.exports = {
                   reject(err);
                 });
             }
+          }
+          else {
+            resolve(null);
+          }
         })
         .catch(err => {
           reject(err);

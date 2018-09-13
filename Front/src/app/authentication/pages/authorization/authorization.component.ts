@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
-
 import { AuthenticationService } from './../../shared/authentication.service';
 
 @Component({
@@ -23,7 +22,7 @@ export class AuthorizationComponent implements OnInit {
         .subscribe(() => {
           this.router.navigate(['/user']);
         }, (err: HttpErrorResponse) => {
-          // 500: Internal Error Component
+          this.router.navigate(['/server-error', 'Internal Error']);
         });
     });
   }

@@ -11,19 +11,16 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { ProgressbarModule } from 'ngx-bootstrap/progressbar';
-
+import { ToastrModule } from 'ngx-toastr';
 import { UserComponent } from './pages/user/user.component';
 import { RoomComponent } from './pages/room/room.component';
 import { BookingComponent } from './pages/booking/booking.component';
 import { HeaderComponent } from './components/header/header.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
-
 import { CalendarsService } from './shared/httpService/calendars.service';
 import { DataService } from './shared/dataService/data.service';
 import { SocketsService } from './shared/socketsService/sockets.service';
-
 import { routing } from './calendars-routing.module';
-
 import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
 
 // configuration du socket avec le serveur
@@ -49,7 +46,8 @@ const socketsConfig: SocketIoConfig = {
     FontAwesomeModule,
     MatGridListModule,
     ProgressbarModule.forRoot(),
-    SocketIoModule.forRoot(socketsConfig)
+    SocketIoModule.forRoot(socketsConfig),
+    ToastrModule.forRoot()
   ],
   declarations: [
     UserComponent,

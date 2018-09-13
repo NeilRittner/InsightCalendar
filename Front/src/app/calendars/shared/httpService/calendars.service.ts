@@ -34,14 +34,6 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  getNameFromEmail(email: string): Observable<any> {
-    const url = `${ environment.serveur_url }api/nameFromEmail?email=${email}`;
-    const httpOptions = { withCredentials: true };
-    return this.http
-      .get(url, httpOptions)
-      .pipe(catchError(err => throwError(err)));
-  }
-
   getAllRooms(): Observable<any> {
     const url = `${environment.serveur_url}api/allRooms`;
     const httpOptions = { withCredentials: true };
@@ -78,14 +70,6 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  getRoomOccupancy(roomName): Observable<any> {
-    const url = `${environment.serveur_url}api/roomOccupancy?roomName=${roomName}`;
-    const httpOptions = { withCredentials: true };
-    return this.http
-      .get(url, httpOptions)
-      .pipe(catchError(err => throwError(err)));
-  }
-
   cancelEvent(organizerEmail, eventId, roomEmail): Observable<any> {
     const url = `${environment.serveur_url}api/cancelEvent`;
     const httpBody = {
@@ -112,14 +96,6 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  getCalendarAfterRemove(calendarId, eventId): Observable<any> {
-    const url = `${environment.serveur_url}api/calendarAfterRemove?calendarId=${calendarId}&evetId=${eventId}`;
-    const httpOptions = { withCredentials: true };
-    return this.http
-      .get(url, httpOptions)
-      .pipe(catchError(err => throwError(err)));
-  }
-
   getRoomInformation(roomName): Observable<any> {
     const url = `${environment.serveur_url}api/roomInformation?roomName=${roomName}`;
     const httpOptions = { withCredentials: true };
@@ -128,21 +104,12 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  getUserFromIdCard(idCard): Observable<any> {
-    const url = `${environment.serveur_url}api/mailFromCard?idCard=${idCard}`;
-    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
-    return this.http
-      .get(url, httpOptions)
-      .pipe(catchError(err => throwError(err)));
-  }
-
-  organizerIsPresent(organizerEmail, eventId, roomName): Observable<any> {
-    const url = `${environment.serveur_url}api/organizerIsPresent?` +
+  organizersAttendance(organizerEmail, eventId, roomName): Observable<any> {
+    const url = `${environment.serveur_url}api/organizersAttendance?` +
     `organizerEmail=${organizerEmail}&eventId=${eventId}&roomName=${roomName}`;
     const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
     return this.http
       .get(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
-
 }

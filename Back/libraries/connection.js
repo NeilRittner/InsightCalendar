@@ -123,13 +123,25 @@ module.exports = {
               });
           }
           else {
-            this.updateCard(googleUserInfo['sub'], idCard)
-              .then(() => {
-                resolve(user[0]);
+            this.verifyCard(idCard)
+              .then(userDb => {
+                if (userDb === null || userDb['IdGoogle'] !== googleUserInfo['sub']) {
+                  console.log('update');
+                  this.updateCard(googleUserInfo['sub'], idCard)
+                    .then(() => {
+                      resolve(user[0]);
+                    })
+                    .catch(err => {
+                      reject(err);
+                    });
+                }
+                else {
+                  resolve(user[0]);
+                }
               })
               .catch(err => {
                 reject(err);
-              });
+              })
           }
         })
         .catch(err => {
@@ -139,17 +151,22 @@ module.exports = {
   },
 
   updateCard: function (googleUserId, idCard) {
-    util.removeUserFromCard(idCard);
-    const query = `UPDATE users SET IdCard = ${idCard} WHERE IdGoogle = ${googleUserId}`;
-    return new Promise ((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err) {
-        if (!err) {
-          resolve('row updated');
-        }
-        else {
+    return new Promise((resolve, reject) => {
+      util.removeUserFromCard(idCard)
+        .then(() => {
+          const query = `UPDATE users SET IdCard = ${idCard} WHERE IdGoogle = ${googleUserId}`;
+          pool.calendar_pool.query(query, function (err) {
+            if (!err) {
+              resolve('row updated');
+            }
+            else {
+              reject(err);
+            }
+          });
+        })
+        .catch(err => {
           reject(err);
-        }
-      });
+        });
     });
   }
 

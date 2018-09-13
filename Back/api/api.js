@@ -8,7 +8,6 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-const events = require('events');
 var ev = require('../libraries/eventEmitter');
 
 
@@ -86,13 +85,11 @@ app.post('/googleAccess', function (req, res) {
     });
 });
 
-
 /**
  * Route: cardAccess
  * This route is used to verify the id of the card sent by the client-side and set the session user.
- * Return a status code:
- * 200: OK
- * 404: User not found
+ * Return a status code and a message if necessary:
+ * 200: OK or no card associated
  * 500: Internal Error
  */
 app.post('/cardAccess', function (req, res) {
@@ -110,14 +107,13 @@ app.post('/cardAccess', function (req, res) {
           });
       } 
       else {
-        res.status(200).send(JSON.stringify('User has no card'));
+        res.status(404).send();
       }
     })
     .catch(err => {
       res.status(500).send(err);
     });
 });
-
 
 /**
  * Route: registerCard
@@ -158,7 +154,6 @@ app.post('/registerCard', function (req, res) {
     });
 });
 
-
 /**
  * Route: code
  * This route will be used to receive the code, exchange it against the access and refresh tokens and store them.
@@ -175,16 +170,13 @@ app.post('/code', function (req, res) {
           res.status(200).send();
         })
         .catch(err => {
-          // console.log(err);
           res.status(500).send(err);
         });
     })
     .catch(err => {
-      // console.log(err);
       res.status(500).send(err);
     });
 });
-
 
 /**
  * Route: currentUser
@@ -197,17 +189,15 @@ app.get('/currentUser', function (req, res) {
     res.send(req.session.userInfo);
   } 
   else { 
-    res.status(500).send('User not set');
+    res.status(500).send('There is no user set');
   }
 });
-
 
 /**
  * 
  */
 app.get('/userCalendar', function (req, res) {
   authClient.setCredentials(req.session.tokens);
-
   calendars.getCalendar(authClient, req.query.calendarId, req.query.timescale)
     .then(events => {
       res.send(events);
@@ -216,21 +206,6 @@ app.get('/userCalendar', function (req, res) {
       res.status(500).send(err);
     });
 });
-
-
-/**
- * 
- */
-app.get('/nameFromEmail', function (req, res) {
-  util.getNameFromEmail(req.query.email)
-    .then(name => {
-      res.send(name);
-    })
-    .catch(err => {
-      res.status(500).send(err);
-    });
-});
-
 
 /**
  * 
@@ -252,7 +227,6 @@ app.post('/createEvent', function (req, res) {
     });
 });
 
-
 /**
  * 
  */
@@ -265,7 +239,6 @@ app.get('/allRooms', function (req, res) {
       res.status(500).send(err);
     });
 });
-
 
 /**
  * 
@@ -280,66 +253,51 @@ app.get('/allUsers', function (req, res) {
     });
 });
 
-
 /**
  * 
  */
 app.post('/updatePosition', function (req, res) {
   position.getMove(req.body.userIdCard, req.body.roomName)
     .then(move => {
-      position.updatePositionAndOccupancy(req.body.userIdCard, req.body.roomName, move)
-        .then(() => {
-          res.send(move);
-        })
-        .catch(err => {
-          res.status(500).send(err);
-        });
+      if (move !== null) {
+        position.updatePositionAndOccupancy(req.body.userIdCard, req.body.roomName, move)
+          .then(() => {
+            ev.emit('updateOccupancy', { roomName: req.body.roomName, move: move });
+            res.status(200).send(move);
+          })
+          .catch(err => {
+            res.status(500).send(err);
+          });
+      }
+      else {
+        res.status(404).send();
+      }
     })
     .catch(err => {
       res.status(500).send(err);
     });
 });
-
-
-/**
- * 
- */
-app.get('/roomOccupancy', function (req, res) {
-  position.getRoomOccupancy(req.query.roomName)
-    .then(occupancy => {
-      res.status(200).send(occupancy);
-    })
-    .catch(err => {
-      res.status(500).send(err);
-    });
-});
-
 
 /** 
  * 
  */
 app.post('/cancelEvent', function (req, res) {
-  // Set le credential à l'organisateur de l'event
-  authClient.setCredentials(req.session.tokens);
-
-  calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId)
-    .then(eventRemoved => {
-      ev.emit('eventRemoved', eventRemoved)
-      res.status(200).send(eventRemoved);
-    })
-    .catch(err => {
-      res.status(500).send(err);
-    });
-});
-
-
-/** 
- * 
- */
-app.post('/verifyOccupancy', function (req, res) {
-  calendars.verifyOccupancy(req.body.roomToVerify, req.body.eventToVerify)
-    .then(occupancyBool => {
-      res.status(200).send(occupancyBool);
+  util.getTokensFromEmail(req.body.organizerEmail)
+    .then(tokens => {
+      if (tokens) {
+        authClient.setCredentials(tokens);
+        calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId)
+          .then(eventRemoved => {
+            ev.emit('eventRemoved', eventRemoved)
+            res.status(200).send(eventRemoved);
+          })
+          .catch(err => {
+            res.status(500).send(err);
+          });
+      }
+      else {
+        res.status(403).send("Organiser's tokens not found, the event cannot be deleted");
+      }
     })
     .catch(err => {
       res.status(500).send(err);
@@ -350,12 +308,21 @@ app.post('/verifyOccupancy', function (req, res) {
  * 
  */
 app.post('/updateEndEvent', function (req, res) {
-  // Set le credential à l'organisateur de l'event
-  authClient.setCredentials(req.session.tokens);
-
-  calendars.updateEndEvent(authClient, req.body.calendarId, req.body.eventId, req.body.newEnd)
-    .then(eventUpdated => {
-      res.status(200).send(eventUpdated);
+  util.getTokensFromEmail(req.body.organizerEmail)
+    .then(tokens => {
+      if (tokens) {
+        authClient.setCredentials(tokens);
+        calendars.updateEndEvent(authClient, req.body.calendarId, req.body.eventId, req.body.newEnd)
+          .then(eventUpdated => {
+            res.status(200).send(eventUpdated);
+          })
+          .catch(err => {
+            res.status(500).send(err);
+          });
+      }
+      else {
+        res.status(403).send("Organiser's tokens not found, the event cannot be updated");
+      }
     })
     .catch(err => {
       res.status(500).send(err);
@@ -378,21 +345,8 @@ app.get('/roomInformation', function (req, res) {
 /**
  * 
  */
-app.get('/mailFromCard', function (req, res) {
-  util.getUserMailFromCard(req.query.idCard)
-    .then(email => {
-      res.status(200).send(email);
-    })
-    .catch(err => {
-      res.status(500).send(err);
-    });
-});
-
-/**
- * 
- */
-app.get('/organizerIsPresent', function (req, res) {
-  util.organizerIsPresent(req.query.organizerEmail, req.query.eventId, req.query.roomName)
+app.get('/organizersAttendance', function (req, res) {
+  util.organizersAttendance(req.query.organizerEmail, req.query.eventId, req.query.roomName)
     .then(response => {
       res.status(200).send(response);
     })
@@ -401,16 +355,4 @@ app.get('/organizerIsPresent', function (req, res) {
     });
 });
 
-/**
- * 
- */
-app.get('/organizersLeave', function (req, res) {
-  util.organizersLeave(req.query.organizerEmail, req.query.eventId, req.query.roomName)
-    .then(response => {
-      res.status(200).send(response);
-    })
-    .catch(err => {
-      res.status(500).send(err);
-    });
-});
 module.exports = app;

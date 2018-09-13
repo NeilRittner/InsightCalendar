@@ -1,9 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
-
 import { AuthenticationService } from './../../shared/authentication.service';
-
 import { AuthService, GoogleLoginProvider } from 'angular-6-social-login';
 
 @Component({
@@ -20,9 +18,12 @@ export class LoginComponent implements OnInit {
   ) { }
 
   private idCard: string;
+  private fakeToken: boolean;
+  private cardError: boolean;
 
   signinWithGoogle(): void {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
+    this.fakeToken = false;
     this.authService.signIn(socialPlatformProvider).then(userData => {
       this.service.postGoogleToken(userData.idToken)
         .subscribe((data: string) => {
@@ -32,23 +33,27 @@ export class LoginComponent implements OnInit {
             this.router.navigate(['/user']);
           }
         }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
-          // 498: message token fake
+          console.log(err);
+          if (err['status'] === 498) {
+            this.fakeToken = true;
+          } else if (err['status'] === 500) {
+            this.router.navigate(['/server-error', 'Internal Error']);
+          }
         });
     });
   }
 
   signinWithCard(): void {
+    this.cardError = false;
     this.service.postCardId(this.idCard)
-      .subscribe((data: string) => {
-        if (data) {
-          // Print "error" : user has no card
-        } else {
-          this.router.navigate(['/user']);
-        }
+      .subscribe(() => {
+        this.router.navigate(['/user']);
       }, (err: HttpErrorResponse) => {
-        // 500: Internal Error Component
+        if (err['status'] === 404) {
+          this.cardError = true;
+        } else if (err['status'] === 500) {
+          this.router.navigate(['/server-error', 'Internal Error']);
+        }
       });
   }
 

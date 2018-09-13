@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, OnChanges } from '@angular/core';
 import { Router } from '@angular/router';
 
 @Component({
@@ -6,13 +6,14 @@ import { Router } from '@angular/router';
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css']
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnChanges {
 
   constructor(
     private router: Router
   ) { }
 
   roomNamesList = ['ConferenceRoom', 'RoomA', 'RoomB', 'RoomC'];
+  insightMember: boolean;
 
   @Input() user;
   @Input() timeScale: string;
@@ -30,6 +31,15 @@ export class HeaderComponent implements OnInit {
 
   changeTimeScale(newTimeScale: string): void {
     this.timeScaleChanged.emit(newTimeScale);
+  }
+
+  ngOnChanges(simpleChanges) {
+    if (simpleChanges['user'] && simpleChanges['user']['firstChange'] === false &&
+    this.user['Email'].split('@')[1] !== 'insight-centre.org') {
+      this.insightMember = false;
+    } else {
+      this.insightMember = true;
+    }
   }
 
   ngOnInit() {

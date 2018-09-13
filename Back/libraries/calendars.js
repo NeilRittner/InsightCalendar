@@ -3,7 +3,6 @@
 // npm dependencies and libraries
 require('dotenv').config();
 const { google } = require('googleapis');
-const util = require('./utilitaries');
 const pool = require('../db/pool');
 
 
@@ -11,14 +10,11 @@ const pool = require('../db/pool');
 module.exports = {
   getCalendar: function (auth, calendarId, timeScale) {
     const calendar = google.calendar({ version: 'v3', auth });
-    const eventsToSend = {};
     const times = this.getTimes(timeScale);
     return new Promise((resolve, reject) => {
       this.pullCalendar(calendar, calendarId, times)
         .then(events => {
-          eventsToSend['timescale'] = timeScale;
-          eventsToSend['events'] = events;
-          resolve(eventsToSend);
+          resolve(events);
         })
         .catch(err => {
           reject(err);
@@ -39,7 +35,17 @@ module.exports = {
           resolve(res.data.items);
         }
         else {
-          reject(err);
+          if (err['response']['data']['error'] === 'invalid_grant') {
+            // Issue with the access and refresh tokens
+            reject('Tokens issue');
+          }
+          else if (err['errors'][0]['reason'] === 'notFound') {
+            // User is not a insight member, then he cannot see the asked calendar
+            resolve([]);
+          }
+          else {
+            reject(err);
+          }
         }
       });
     });
@@ -77,14 +83,14 @@ module.exports = {
               auth: auth,
               calendarId: 'primary',
               resource: this.structureEvent(eventInfo)
-            }, function (err, event) {
+            }, function (err, res) {
               if (err) {
                 reject(err);
               }
               else {
-                that.insertEventDB(event['data'], eventInfo['organizer2'])
+                that.insertEventDB(res['data'], eventInfo['organizer2'])
                   .then(() => {
-                    resolve(event['data']);
+                    resolve(res['data']);
                   })
                   .catch(err => {
                     reject(err);
@@ -182,21 +188,31 @@ module.exports = {
     return new Promise((resolve, reject) => {
       const start = eventInfo['start']['dateTime'].split("+")[0];
       const end = eventInfo['end']['dateTime'].split("+")[0];
+      let attendees = '';
       let orga2Email = null;
       let room = null;
+
+      for (let i = 0; i < eventInfo['attendees'].length; i++) {
+        const attendee = eventInfo['attendees'][i];
+        if (i !== 0) {
+          attendees = attendees + ';';
+        }
+        attendees = attendees + attendee['email']
+      }
 
       if (orga2) {
         orga2Email = orga2['Email'];
       }
-      if (eventInfo['room']) {
-        room = eventInfo['room']['Name']
+
+      if (eventInfo['location']) {
+        room = eventInfo['location'];
       }
 
       const query = `INSERT INTO reservations 
-      (idEventGoogleCalendar, Organizer1, Organizer2, Room, StartDate, EndDate)
-      VALUES ('${eventInfo['id']}', '${eventInfo['organizer']['email']}', '${orga2Email}', '${room}', '${start}', '${end}')`;
+      (idEventGoogleCalendar, Organizer1, Organizer2, Room, Attendees, StartDate, EndDate)
+      VALUES ('${eventInfo['id']}', '${eventInfo['organizer']['email']}', '${orga2Email}', '${room}', '${attendees}', '${start}', '${end}')`;
 
-      pool.calendar_pool.query(query, function (err) {
+      pool.calendar_pool.query(query, attendees, function (err) {
         if (!err) {
           resolve('Event inserted');
         }
@@ -210,61 +226,32 @@ module.exports = {
   cancelEvent: function (auth, organizerEmail, eventId) {
     const calendar = google.calendar({ version: 'v3', auth });
     return new Promise((resolve, reject) => {
-      calendar.events.delete({
-        calendarId: organizerEmail,
-        eventId: eventId
-      }, function (err) {
-        if (err) {
-          reject(err);
-        }
-        else {
-          calendar.events.get({
-            calendarId: organizerEmail,
-            eventId: eventId
-          }, function (err, res) {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(res.data);
-            }
-          });
-        }
-      });
-    });
-  },
-
-  verifyOccupancy: function (roomToVerify, eventToVerify) {
-    return new Promise((resolve, reject) => {
-      util.getSecondOrganizer(eventToVerify['id'])
-        .then(orga2 => {
-          let res = 'no';
-          const promises = [];
-          promises.push(util.getUserPositionFromEmail(eventToVerify['organizer']['email']));
-          if (orga2) {
-            promises.push(util.getUserPositionFromEmail(orga2));
+      this.getEvent(calendar, organizerEmail, eventId)
+        .then(dataEvent => {
+          if (dataEvent['status'] === 'cancelled') {
+            resolve(dataEvent);
           }
-
-          Promise.all(promises)
-            .then(positions => {
-              for (let i = 0; i < promises.length; i++) {
-                if (positions[i] === roomToVerify) {
-                  res = 'yes';
-                }
+          else {
+            calendar.events.delete({
+              calendarId: organizerEmail,
+              eventId: eventId
+            }, function (err) {
+              if (err) {
+                reject(err);
               }
-              resolve(res);
-            })
-            .catch(err => {
-              reject(err);
+              else {
+                resolve(dataEvent);
+              }
             });
+          }
         })
         .catch(err => {
           reject(err);
-        });
+        })
     });
   },
 
-  updateEndEvent: function (auth, calendarId, eventId, newEnd) {
-    const calendar = google.calendar({ version: 'v3', auth });
+  getEvent: function (calendar, calendarId, eventId) {
     return new Promise((resolve, reject) => {
       calendar.events.get({
         calendarId: calendarId,
@@ -272,44 +259,35 @@ module.exports = {
       }, function (err, res) {
         if (err) {
           reject(err);
+        } else {
+          resolve(res.data);
         }
-        res.data.end.dateTime = newEnd;
-
-        calendar.events.update({
-          calendarId: calendarId,
-          eventId: eventId,
-          resource: res.data
-        }, function (err, response) {
-          if (err) {
-            reject(err);
-          }
-          else {
-            resolve(response.data);
-          }
-        });
       });
     });
   },
 
-  determineTimeScale: function (event) {
-    let times = this.getTimes('Day');
-    let startTime = new Date(times['timeMin']).getTime();
-    let endTime = new Date(times['timeMax']).getTime();
-    let eventStartTime = new Date(event['start']['dateTime']).getTime();
-
-    if (eventStartTime >= startTime && eventStartTime <= endTime) {
-      return 'Day';
-    }
-    else {
-      times = this.getTimes('Week');
-      startTime = new Date(times['timeMin']).getTime();
-      endTime = new Date(times['timeMax']).getTime();
-      if (eventStartTime >= startTime && eventStartTime <= endTime) {
-        return 'Week';
-      }
-      else {
-        return 'Month';
-      }
-    }
+  updateEndEvent: function (auth, calendarId, eventId, newEnd) {
+    const calendar = google.calendar({ version: 'v3', auth });
+    return new Promise((resolve, reject) => {
+      this.getEvent(calendar, calendarId, eventId)
+        .then(dataEvent => {
+          dataEvent['end']['dateTime'] = newEnd;
+          calendar.events.update({
+            calendarId: calendarId,
+            eventId: eventId,
+            resource: dataEvent
+          }, function (err, response) {
+            if (err) {
+              reject(err);
+            }
+            else {
+              resolve(response.data);
+            }
+          });
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
   }
 };

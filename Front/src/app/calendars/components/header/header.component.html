@@ -1,9 +1,9 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <!-- Prévoir le status dans le brand sous forme de rond de couleur? -->
   <span class="navbar-brand mb-0 h1 name">{{user.FirstName}} {{user.LastName}}</span>
   
-  <div class="collapse navbar-collapse">
-    <ul class="navbar-nav mr-auto">
+  <div class="collapse navbar-collapse" *ngIf="insightMember">
+    <!-- ul : If insight member -->
+    <ul class="navbar-nav mr-auto" *ngIf="insightMember === true">
       <li class="nav-item" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
         <a class="nav-link" [routerLink]="['/user']">
           Home
@@ -16,8 +16,7 @@
         </a>
       </li>
 
-      <li *ngFor="let roomName of roomNamesList" class="nav-item" 
-      [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
+      <li *ngFor="let roomName of roomNamesList" class="nav-item" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
         <a class="nav-link" [routerLink]="['/room', roomName]">
           {{ spaceRoomName(roomName) }}
         </a>

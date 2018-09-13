@@ -24,4 +24,12 @@ export class SocketsService {
       });
     });
   }
+
+  updateOccupancy(): Observable<any> {
+    return new Observable(observer => {
+      this.socket.on('updateOccupancy', data => {
+        observer.next(data);
+      });
+    });
+  }
 }

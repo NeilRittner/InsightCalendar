@@ -2,13 +2,11 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { HttpErrorResponse } from '@angular/common/http';
 import { formatDate } from '@angular/common';
 import { FormControl } from '@angular/forms';
-
+import { ToastrService } from 'ngx-toastr';
 import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
 import { SocketsService } from './../../shared/socketsService/sockets.service';
-
-import { ActivatedRoute } from '@angular/router';
-
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-room',
@@ -22,7 +20,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     private httpService: CalendarsService,
     private dataService: DataService,
     private socketsService: SocketsService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router,
+    private toastr: ToastrService
   ) { }
 
   // Room Information
@@ -43,10 +43,14 @@ export class RoomComponent implements OnInit, OnDestroy {
   timeOutCancel;
   timeOutStart;
 
-  // Others
+  // Sockets
   insertEventConnection;
+  updateRoomOccupancy;
+
+  // Others
   idCardControl = new FormControl();  // FormControl for scan
   numberScan: number;
+  cardUnknown: boolean;
   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'];
 
@@ -91,8 +95,9 @@ export class RoomComponent implements OnInit, OnDestroy {
         .subscribe(data => {
           resolve(data);
         }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
+          if (err['status'] === 500) {
+            this.router.navigate(['/server-error', 'Internal Error']);
+          }
         });
     });
   }
@@ -110,8 +115,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.events = [];
     this.nextEvent = [];
 
-    for (let i = 0; i < data['events'].length; i++) {
-      const event = data['events'][i];
+    for (let i = 0; i < data.length; i++) {
+      const event = data[i];
       event['date'] = this.extractDate(event['start']['dateTime']);
       event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
       event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
@@ -132,7 +137,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
 
     if (this.nextEvent.length !== 0) {
-      this.organizerIsPresent(this.nextEvent)
+      this.organizersAttendance(this.nextEvent)
         .then(bool => {
           const nowTime = new Date().getTime();
           let startTime = this.determineStartTime(this.nextEvent);
@@ -143,10 +148,10 @@ export class RoomComponent implements OnInit, OnDestroy {
             }
             this.startTimer(startTime);
           } else {
-            if (data['events'][this.nextEventPos + 1]) {
-              data['events'][this.nextEventPos]['type'] = 'danger';
-              data['events'][this.nextEventPos + 1]['type'] = 'warning';
-              this.nextEvent = data['events'][this.nextEventPos + 1];
+            if (data[this.nextEventPos + 1]) {
+              data[this.nextEventPos]['type'] = 'danger';
+              data[this.nextEventPos + 1]['type'] = 'warning';
+              this.nextEvent = data[this.nextEventPos + 1];
               this.nextEventPos = this.nextEventPos + 1;
 
               startTime = this.determineStartTime(this.nextEvent);
@@ -160,10 +165,10 @@ export class RoomComponent implements OnInit, OnDestroy {
               this.nextEventPos = -1;
             }
           }
-          this.events = data['events'];
+          this.events = data;
         });
     } else {
-      this.events = data['events'];
+      this.events = data;
     }
   }
 
@@ -179,10 +184,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
 
-  organizerIsPresent(event): Promise<any> {
-    return new Promise((resolve, reject) => {
+  organizersAttendance(event): Promise<any> {
+    return new Promise((resolve) => {
       const orga = event['creator'] ? event['creator']['email'] : event['organizer']['email'];
-      this.httpService.organizerIsPresent(orga, event['id'], this.selectedRoom['Name'])
+      this.httpService.organizersAttendance(orga, event['id'], this.selectedRoom['Name'])
       .subscribe(response => {
         if (response === 'yes') {
           resolve(true);
@@ -190,8 +195,9 @@ export class RoomComponent implements OnInit, OnDestroy {
           resolve(false);
         }
       }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component ou 404
+        if (err['status'] === 500) {
+          this.router.navigate(['/server-error', 'Internal Error']);
+        }
       });
     });
   }
@@ -200,7 +206,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   startTimer(startTime): void {
     setTimeout(() => {
       if (this.selectedRoom['Occupancy'] > 0) {
-        this.organizerIsPresent(this.nextEvent)
+        this.organizersAttendance(this.nextEvent)
           .then(bool => {
             if (bool === true) {
               this.events[this.nextEventPos]['type'] = 'danger';
@@ -257,18 +263,20 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   setUserPosition(): void {
     const idCard = this.idCardControl.value;
+    this.cardUnknown = false;
     this.httpService.postUserPosition(idCard, this.selectedRoom['Name'])
       .subscribe(move => {
         if (move === 'in') {
-          this.selectedRoom['Occupancy'] = this.selectedRoom['Occupancy'] + 1;
           this.organizerBeforeCancel();
         } else {
-          this.selectedRoom['Occupancy'] = this.selectedRoom['Occupancy'] - 1;
           this.updateEndEvent();
         }
       }, (err: HttpErrorResponse) => {
-        // console.log(err);
-        // 500: Internal Error Component
+        if (err['status'] === 404) {
+          this.cardUnknown = true;
+        } else if (err['status'] === 500) {
+          this.router.navigate(['/server-error', 'Internal Error']);
+        }
       });
     this.idCardControl.reset();
   }
@@ -279,7 +287,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const currentEvent = eventCurrently[0];
     const posCurrentEvent = eventCurrently[1];
     if (posCurrentEvent !== -1 && this.nextEvent['id'] === currentEvent['id']) {
-      this.organizerIsPresent(currentEvent)
+      this.organizersAttendance(currentEvent)
         .then(bool => {
           if (bool === true) {
             this.events[posCurrentEvent]['type'] = 'danger';
@@ -320,7 +328,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const posInEvents = res[1];
 
     if (currentEvent) {
-      this.organizerIsPresent(currentEvent)
+      this.organizersAttendance(currentEvent)
         .then(bool => {
           if (bool === false) {
             this.httpService.updateEndEvent(currentEvent['organizer']['email'], currentEvent['id'], new Date())
@@ -330,8 +338,11 @@ export class RoomComponent implements OnInit, OnDestroy {
                 this.events[posInEvents]['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
                 this.events = this.events.slice();
               }, (err: HttpErrorResponse) => {
-                // console.log(err['status']);
-                // 500: Internal Error Component
+                if (err['status'] === 403) {
+                  this.toastr.error(err['error'], 'Update', { timeOut: 3000 });
+                } else if (err['status'] === 500) {
+                  this.router.navigate(['/server-error', 'Internal Error']);
+                }
               });
           }
         });
@@ -346,8 +357,13 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.removeEvent(eventRemoved['id']);
         }
       }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
+        if (err['status'] === 403) {
+          this.toastr.error(err['error'], 'Delete', { timeOut: 3000 });
+          eventToCancel['type'] = 'danger';
+          this.events = this.events.slice();
+        } else if (err['status'] === 500) {
+          this.router.navigate(['/server-error', 'Internal Error']);
+        }
       });
   }
 
@@ -384,19 +400,18 @@ export class RoomComponent implements OnInit, OnDestroy {
   setupSocket(): void {
     this.insertEventConnection = this.socketsService.eventInserted()
       .subscribe(data => {
-        if (this.isRoom(this.selectedRoom['Email'], data['event']['attendees'])) {
+        if (this.isRoom(this.selectedRoom['Email'], data['attendees'])) {
           this.getCalendar(this.selectedRoom['Email'])
             .then(dataGet => {
               this.clearTimers();
-
+              const newEventStartTime = new Date(data['start']['dateTime'].split('+')[0]).getTime();
               let newEvents;
               let index = -1;
-              const newEventStartTime = new Date(data['event']['start']['dateTime'].split('+')[0]).getTime();
 
-              for (let i = 0; i < dataGet['events'].length; i++) {
-                const event = dataGet['events'][i];
+              for (let i = 0; i < dataGet.length; i++) {
+                const event = dataGet[i];
                 const eventStartTime = new Date(event['start']['dateTime'].split('+')[0]).getTime();
-                if (event['id'] === data['event']['id'] ) {
+                if (event['id'] === data['id'] ) {
                   break;
                 }
                 if (eventStartTime > newEventStartTime) {
@@ -404,15 +419,26 @@ export class RoomComponent implements OnInit, OnDestroy {
                 }
               }
               if (index === -1) {
-                index = dataGet['events'].length;
+                index = dataGet.length;
               }
 
               newEvents = this.events.slice(0, index);
-              newEvents.push(data['event']);
+              newEvents.push(data);
               newEvents = (newEvents).concat(this.events.slice(index));
-              dataGet['events'] = newEvents;
+              dataGet = newEvents;
               this.calendarTreatments(dataGet);
             });
+        }
+      });
+
+    this.updateRoomOccupancy = this.socketsService.updateOccupancy()
+      .subscribe(data => {
+        if (data['roomName'] === this.selectedRoom['Name']) {
+          if (data['move'] === 'in') {
+            this.selectedRoom['Occupancy'] = this.selectedRoom['Occupancy'] + 1;
+          } else {
+            this.selectedRoom['Occupancy'] = this.selectedRoom['Occupancy'] - 1;
+          }
         }
       });
   }
@@ -433,9 +459,9 @@ export class RoomComponent implements OnInit, OnDestroy {
   removeEvent(eventId): void {
     this.getCalendar(this.selectedRoom['Email'])
       .then(data => {
-        const newEvents = this.removeEventInList(data['events'], eventId);
+        const newEvents = this.removeEventInList(data, eventId);
         if (newEvents.length !== 0) {
-          data['events'] = newEvents;
+          data = newEvents;
           this.calendarTreatments(data);
         } else {
           this.removeEvent(eventId);
@@ -462,6 +488,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.insertEventConnection !== undefined) {
       this.insertEventConnection.unsubscribe();
     }
+    if (this.updateRoomOccupancy !== undefined) {
+      this.updateRoomOccupancy.unsubscribe();
+    }
   }
 
 
@@ -470,6 +499,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.dataService.getUser();
     }
     this.route.params.subscribe(params => {
+      this.cardUnknown = false;
       this.setRoom(params['roomName']);
     });
   }

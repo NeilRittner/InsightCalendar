@@ -4,13 +4,19 @@
   </p>
   
   <button (click)="signinWithGoogle()"> Sign in with Google </button>
+  <div *ngIf="fakeToken">
+    Failure in the authentication of your Google token
+  </div>
   
   <div>
     <br>
     <form>
       <div>
         <label for="name"> Scan your card </label>
-        <input type="password" class="form-control" id="cardForm" [(ngModel)]="idCard" name="card" required autofocus>
+        <input type="password" class="form-control" id="cardForm" [(ngModel)]="idCard" name="card">
+        <div *ngIf="cardError" class="alert alert-danger">
+          This card is not associated to a user
+        </div>
       </div>
       <button (click)="signinWithCard()" hidden></button>
     </form>

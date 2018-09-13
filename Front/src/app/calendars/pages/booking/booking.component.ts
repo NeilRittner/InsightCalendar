@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
 import { Router } from '@angular/router';
 import { FormControl } from '@angular/forms';
+import { ToastrService } from 'ngx-toastr';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-
 import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
 
@@ -20,21 +20,25 @@ export class BookingComponent implements OnInit {
   constructor(
     private httpService: CalendarsService,
     private dataService: DataService,
-    private router: Router
+    private router: Router,
+    private toastr: ToastrService
   ) { }
 
   title: string;  // Title of the event
   startDate: Date;  // Start date of the event
   endDate: Date;  // End date of the event
   eventLength = 60; // Length of the event, in minutes
+  errorDate = false;
 
   roomsControl = new FormControl(); // FormControl for room
   roomsAutocomplete = []; // Autocomplete of rooms
   filteredRooms: Observable<any>; // List of rooms filtered according to box content
   selectedRoom;
+  errorRoom = false;
+
 
   coOrgaControl = new FormControl();
-  coOrga;
+  coOrga = null;
 
   attendeesControl = new FormControl();  // FormControl for autocomplete
   attendeesAutocomplete = []; // Autocomplete of attendees which are not selected
@@ -86,8 +90,9 @@ export class BookingComponent implements OnInit {
         this.roomsAutocomplete = rooms;
         this.setFilteredRoomsAutocomplete();
       }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
+        if (err['status'] === 500) {
+          this.router.navigate(['/server-error', 'Internal Error']);
+        }
       });
   }
 
@@ -122,6 +127,8 @@ export class BookingComponent implements OnInit {
    *
    */
   clearRoom(): void {
+    this.errorRoom = false;
+    this.selectedRoom = null;
     this.roomsControl.reset();
   }
 
@@ -152,8 +159,9 @@ export class BookingComponent implements OnInit {
         this.setFilteredAttendeesAutcomplete();
         this.addAttendee(this.dataService.user);
       }, (err: HttpErrorResponse) => {
-        // console.log(err['status']);
-        // 500: Internal Error Component
+        if (err['status'] === 500) {
+          this.router.navigate(['/server-error', 'Internal Error']);
+        }
       });
   }
 
@@ -205,6 +213,9 @@ export class BookingComponent implements OnInit {
    *
    */
   createEvent(): void {
+    this.errorDate = false;
+    this.errorRoom = false;
+
     if (this.eventLength > 0) {
       const event = {
         title: this.title,
@@ -218,17 +229,17 @@ export class BookingComponent implements OnInit {
       this.httpService.postEvent(event)
         .subscribe(data => {
           if (data) {
-            console.log(data);
+            this.errorRoom = true;
           } else {
             this.router.navigate(['/user']);
           }
         }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
+          if (err['status'] === 500) {
+            this.router.navigate(['/server-error', 'Internal Error']);
+          }
         });
     } else {
-      // Event finit avant de commencer
-      // Do something to display the error
+      this.toastr.error('The event start after ending', 'Time Issue', { timeOut: 3000 });
     }
   }
 

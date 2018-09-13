@@ -1,7 +1,7 @@
+import { Router } from '@angular/router';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
 import { formatDate } from '../../../../../node_modules/@angular/common';
-
 import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
 import { SocketsService } from './../../shared/socketsService/sockets.service';
@@ -16,11 +16,12 @@ export class UserComponent implements OnInit, OnDestroy {
   constructor(
     private httpService: CalendarsService,
     private dataService: DataService,
-    private socketsService: SocketsService
+    private socketsService: SocketsService,
+    private router: Router
   ) { }
 
   // Global information
-  timescale: string;
+  timescale;
   events = [];
 
   // Time
@@ -40,20 +41,24 @@ export class UserComponent implements OnInit, OnDestroy {
   }
 
   setCalendar(timescale?: string): void {
+    if (timescale) {
+      this.timescale = timescale;
+    }
     this.getCalendar(timescale)
       .then(data => {
         this.calendarTreatments(data);
       });
   }
 
-  getCalendar(timeScale?: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.httpService.getCalendar('primary', timeScale)
+  getCalendar(timescale?: string): Promise<any> {
+    return new Promise((resolve) => {
+      this.httpService.getCalendar('primary', timescale)
         .subscribe(data => {
           resolve(data);
         }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
+          if (err['status'] === 500) {
+            this.router.navigate(['/server-error', 'Internal Error']);
+          }
         });
     });
   }
@@ -66,35 +71,29 @@ export class UserComponent implements OnInit, OnDestroy {
   }
 
   calendarTreatments(data: any): void {
-    for (let i = 0; i < data['events'].length; i++) {
-      const event = data['events'][i];
+    for (let i = 0; i < data.length; i++) {
+      const event = data[i];
       event['date'] = this.extractDate(event['start']['dateTime']);
       event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
       event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
       event['type'] = 'danger';
     }
-    this.timescale = data['timescale'];
-    this.events = data['events'];
+    this.events = data;
   }
 
   setupSockets(): void {
     this.insertEventConnection = this.socketsService.eventInserted()
       .subscribe(dataInsert => {
-        if (this.userInMeeting(this.dataService.user['Email'], dataInsert['event']['attendees'])) {
+        if (this.userInMeeting(this.dataService.user['Email'], dataInsert['attendees'])) {
           this.getCalendar()
             .then(dataGet => {
-              const dataFinal = [];
-              const newEventStartTime = new Date(dataInsert['event']['start']['dateTime'].split('+')[0]).getTime();
+              this.timescale = 'Week';
+              const newEventStartTime = new Date(dataInsert['start']['dateTime'].split('+')[0]).getTime();
               let index = -1;
+              let dataFinal = [];
 
-              if (dataGet['timescale'] === 'Month' || (dataGet['timescale'] === 'Week' && dataInsert['timescale'] === 'Day')) {
-                dataFinal['timescale'] = dataInsert['timescale'];
-              } else {
-                dataFinal['timescale'] = dataGet['timescale'];
-              }
-
-              for (let i = 0; i < dataGet['events'].length; i++) {
-                const event = dataGet['events'][i];
+              for (let i = 0; i < dataGet.length; i++) {
+                const event = dataGet[i];
                 const eventStartTime = new Date(event['start']['dateTime'].split('+')[0]).getTime();
                 if (eventStartTime > newEventStartTime) {
                   index = i;
@@ -102,12 +101,12 @@ export class UserComponent implements OnInit, OnDestroy {
               }
 
               if (index === -1) {
-                index = dataGet['events'].length;
+                index = dataGet.length;
               }
 
-              dataFinal['events'] = dataGet['events'].slice(0, index);
-              dataFinal['events'].push(dataInsert['event']);
-              dataFinal['events'] = (dataFinal['events']).concat(dataGet['events'].slice(index));
+              dataFinal = dataGet.slice(0, index);
+              dataFinal.push(dataInsert);
+              dataFinal = (dataFinal).concat(dataGet.slice(index));
               this.calendarTreatments(dataFinal);
             });
         }
@@ -116,7 +115,7 @@ export class UserComponent implements OnInit, OnDestroy {
     this.removeEventConnection = this.socketsService.eventRemoved()
       .subscribe(data => {
         if (this.userInMeeting(this.dataService.user['Email'], data['attendees'])) {
-          this.removeEvent(data['id'], this.timescale);
+          this.removeEvent(data['id']);
         }
       });
   }
@@ -132,28 +131,12 @@ export class UserComponent implements OnInit, OnDestroy {
     return inAttendees;
   }
 
-  removeEvent(eventId, timescale): void {
-    this.getCalendar(timescale)
+  removeEvent(eventId): void {
+    this.getCalendar()
       .then(data => {
-        const newEvents = this.removeEventInList(data['events'], eventId);
-        if (timescale === 'Month' || newEvents.length !== 0) {
-          const newData = {
-            'timescale': timescale,
-            'events': newEvents
-          };
-          this.calendarTreatments(newData);
-        } else {
-          this.removeEvent(eventId, this.followingTimescale(timescale));
-        }
+        data = this.removeEventInList(data, eventId);
+        this.calendarTreatments(data);
       });
-  }
-
-  followingTimescale(timescale: string): string {
-    if (timescale === 'Month' || timescale === 'Week') {
-      return 'Month';
-    } else {
-      return 'Week';
-    }
   }
 
   removeEventInList(events, eventId): Array<any> {
@@ -173,7 +156,7 @@ export class UserComponent implements OnInit, OnDestroy {
     if (JSON.stringify(this.dataService.user) === '{}') {
       this.dataService.getUser();
     }
-    this.setCalendar();
+    this.setCalendar('Week');
     this.setupSockets();
   }
 

@@ -9,10 +9,12 @@ import { routing } from './app-routing.module';
 
 import { AuthenticationModule } from './authentication/authentication.module';
 import { CalendarsModule } from './calendars/calendars.module';
+import { ServerErrorComponent } from './shared/server-error/server-error.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    ServerErrorComponent
   ],
   imports: [
     BrowserModule,

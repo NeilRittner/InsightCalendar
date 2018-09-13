@@ -8,8 +8,6 @@ const api = require('./api/api');
 const server = require('http').Server(app);
 const io = require('socket.io').listen(server);
 var ev = require('./libraries/eventEmitter');
-const calendars = require('./libraries/calendars');
-
 
 
 // Setup for api
@@ -23,18 +21,21 @@ app.get('/', function (req, res) {
 
 
 server.listen(process.env.SERVER_PORT);
-// io.sockets.on('connect', function (socket) {
-//   console.log('id : ' + socket.id);
-// });
 
 // Sockets part
-ev.on('eventInserted', eventInserted => {
-  const data = {};
-  data['timescale'] = calendars.determineTimeScale(eventInserted);
-  data['event'] = eventInserted;
-  io.sockets.emit('eventInserted', data);
-});
+io.sockets.on('connect', (socket) => {
+  ev.on('eventInserted', eventInserted => {
+    socket.emit('eventInserted', eventInserted);
+  });
 
-ev.on('eventRemoved', eventRemoved => {
-  io.sockets.emit('eventRemoved', eventRemoved);
+  ev.on('eventRemoved', eventRemoved => {
+    socket.emit('eventRemoved', eventRemoved);
+  });
+
+  ev.on('updateOccupancy', data => {
+    socket.emit('updateOccupancy', data);
+  });
+
+  socket.on('disconnection', () => {
+  });
 });

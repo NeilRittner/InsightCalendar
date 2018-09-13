@@ -1,9 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '../../../../../node_modules/@angular/common/http';
-
 import { AuthenticationService } from './../../shared/authentication.service';
-
 import { AuthService, GoogleLoginProvider } from 'angular-6-social-login';
 
 @Component({
@@ -21,6 +19,7 @@ export class RegisterComponent implements OnInit {
 
   private idToken: string;
   private idCard: string;
+  private fakeToken: boolean;
 
   enterGoogleAccount() {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
@@ -38,11 +37,14 @@ export class RegisterComponent implements OnInit {
           this.router.navigate(['/user']);
         }
       }, (err: HttpErrorResponse) => {
-          // console.log(err['status']);
-          // 500: Internal Error Component
-          // 498: message token fake
+        if (err['status'] === 498) {
+          this.fakeToken = true;
+        } else if (err['status'] === 500) {
+          this.router.navigate(['/server-error', 'Internal Error']);
+        }
       });
   }
+
   ngOnInit() {
   }
 
