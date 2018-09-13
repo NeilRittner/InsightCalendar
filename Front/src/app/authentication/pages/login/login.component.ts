@@ -19,7 +19,6 @@ export class LoginComponent implements OnInit {
 
   private idCard: string;
   private fakeToken: boolean;
-  private cardError: boolean;
 
   signinWithGoogle(): void {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
@@ -33,7 +32,6 @@ export class LoginComponent implements OnInit {
             this.router.navigate(['/user']);
           }
         }, (err: HttpErrorResponse) => {
-          console.log(err);
           if (err['status'] === 498) {
             this.fakeToken = true;
           } else if (err['status'] === 500) {
@@ -44,13 +42,12 @@ export class LoginComponent implements OnInit {
   }
 
   signinWithCard(): void {
-    this.cardError = false;
     this.service.postCardId(this.idCard)
       .subscribe(() => {
         this.router.navigate(['/user']);
       }, (err: HttpErrorResponse) => {
         if (err['status'] === 404) {
-          this.cardError = true;
+          
         } else if (err['status'] === 500) {
           this.router.navigate(['/server-error', 'Internal Error']);
         }

@@ -47,6 +47,7 @@ export class CalendarComponent implements OnInit, OnChanges {
         if (indexInDays !== -1 && indexInDays !== 5) {
           /* ValueEvent */
           let valueEvent = this.calculValueEvent(startTimes[0], endTimes[0], startTimes[1], endTimes[1]);
+
           /* ValueBefore */
           if (!exEventLongDate || exEventLongDate.getDate() !== eventLongDate.getDate()) {
             exEventLongDate = eventLongDate;
@@ -179,7 +180,6 @@ export class CalendarComponent implements OnInit, OnChanges {
     } else {
       return valueAfter;
     }
-    // return (hour * (100 / this.nbHours) + min * (100 / (this.nbHours * 60)));
   }
 
   adaptTime(time, moment): number {

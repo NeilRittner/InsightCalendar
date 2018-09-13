@@ -21,7 +21,7 @@ module.exports = {
 
   getUserInformation: function (googleUserInfo) {
     return new Promise((resolve, reject) => {
-      this.googleUserExist(googleUserInfo['sub'])
+      util.googleUserExist(googleUserInfo['sub'])
         .then(user => {
           if (user.length === 0) {
             this.insertNewUser(googleUserInfo).then(user2 => {
@@ -35,21 +35,6 @@ module.exports = {
         .catch(err => {
           reject(err);
         });
-    });
-  },
-
-  googleUserExist: function (googleUserId) {
-    const query = `SELECT IdGoogle, LastName, FirstName, Email FROM users WHERE IdGoogle = ${googleUserId}`;
-
-    return new Promise((resolve, reject) => {
-      pool.calendar_pool.query(query, function (err, row) {
-        if (!err) {
-          resolve(row);          
-        }
-        else {
-          reject(err);
-        }
-      });
     });
   },
 
@@ -91,7 +76,6 @@ module.exports = {
 
   verifyCard: function (idCard) {
     const query = `SELECT IdGoogle, LastName, FirstName, Email FROM users WHERE IdCard = ${idCard}`;
-
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
         if (!err) {
@@ -111,7 +95,7 @@ module.exports = {
 
   registerCard: function (googleUserInfo, idCard) {
     return new Promise((resolve, reject) => {
-      this.googleUserExist(googleUserInfo['sub'])
+      util.googleUserExist(googleUserInfo['sub'])
         .then(user => {
           if (user.length === 0) {
             this.insertNewUser(googleUserInfo, idCard)
@@ -126,7 +110,6 @@ module.exports = {
             this.verifyCard(idCard)
               .then(userDb => {
                 if (userDb === null || userDb['IdGoogle'] !== googleUserInfo['sub']) {
-                  console.log('update');
                   this.updateCard(googleUserInfo['sub'], idCard)
                     .then(() => {
                       resolve(user[0]);

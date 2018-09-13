@@ -7,6 +7,20 @@ const pool = require('../db/pool');
 
 // The functions
 module.exports = {
+  googleUserExist: function (googleUserId) {
+    const query = `SELECT IdGoogle, LastName, FirstName, Email FROM users WHERE IdGoogle = ${googleUserId}`;
+    return new Promise((resolve, reject) => {
+      pool.calendar_pool.query(query, function (err, row) {
+        if (!err) {
+          resolve(row);
+        }
+        else {
+          reject(err);
+        }
+      });
+    });
+  },
+  
   getAllRoom: function () {
     const query = `SELECT * FROM rooms`;
     return new Promise((resolve, reject) => {
@@ -79,7 +93,7 @@ module.exports = {
           pool.calendar_pool.query(query, function (err, row) {
             if (!err) {
               if (row[0] === undefined) {
-                resolve('no');
+                resolve('yes');
               }
               else {
                 let res = 'no'; 
@@ -141,7 +155,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       pool.calendar_pool.query(query, function (err, row) {
         if (!err) {
-          if (row[0]['AccessToken'] !== null && row[0]['RefreshToken'] !== null) {
+          if (row[0] && row[0]['AccessToken'] !== null && row[0]['RefreshToken'] !== null) {
             const tokens = {
               access_token: row[0]['AccessToken'],
               refresh_token: row[0]['RefreshToken']

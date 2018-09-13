@@ -9,9 +9,6 @@
   <form>
     <div>
       <input #scan type="password" class="form-control" [formControl]="idCardControl">
-      <div *ngIf="cardUnknown === true" class="alert alert-danger">
-        This card is not associated to a user
-      </div>
     </div>
     <button (click)="setUserPosition(idCardControl.value)" hidden></button>
   </form>

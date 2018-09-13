@@ -107,7 +107,7 @@ app.post('/cardAccess', function (req, res) {
           });
       } 
       else {
-        res.status(404).send();
+        res.status(404).send('No user associated to this card');
       }
     })
     .catch(err => {
@@ -270,7 +270,7 @@ app.post('/updatePosition', function (req, res) {
           });
       }
       else {
-        res.status(404).send();
+        res.status(404).send('No user associated to this card');
       }
     })
     .catch(err => {

@@ -50,7 +50,6 @@ export class RoomComponent implements OnInit, OnDestroy {
   // Others
   idCardControl = new FormControl();  // FormControl for scan
   numberScan: number;
-  cardUnknown: boolean;
   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'];
 
@@ -263,7 +262,6 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   setUserPosition(): void {
     const idCard = this.idCardControl.value;
-    this.cardUnknown = false;
     this.httpService.postUserPosition(idCard, this.selectedRoom['Name'])
       .subscribe(move => {
         if (move === 'in') {
@@ -273,7 +271,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       }, (err: HttpErrorResponse) => {
         if (err['status'] === 404) {
-          this.cardUnknown = true;
+          this.toastr.error(err['error'], 'Card', { timeOut: 3000 });
         } else if (err['status'] === 500) {
           this.router.navigate(['/server-error', 'Internal Error']);
         }
@@ -499,7 +497,6 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.dataService.getUser();
     }
     this.route.params.subscribe(params => {
-      this.cardUnknown = false;
       this.setRoom(params['roomName']);
     });
   }
