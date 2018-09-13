@@ -25,6 +25,14 @@
     </tr>
   </table>
 
+  <div>
+    <p> Legend </p>
+    <div *ngFor="let color of colors; let i=index" class="row">
+      <fa-icon [icon]="faCircle" class="{{color}}"></fa-icon>
+      <p> {{ colorSignifications[i] }}</p>
+    </div>
+  </div>
+
   <table *ngIf="timeScale === 'Month'" style="width:100%">
     <tr>
       <th class="day" *ngFor="let day of weekDays"> {{ day }} </th>

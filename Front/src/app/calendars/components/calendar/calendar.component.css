@@ -33,3 +33,19 @@ div {
 span {
   padding: 0.2em;
 }
+
+.green {
+  color: #27A844;
+}
+
+.yellow {
+  color: #FEC106;
+}
+
+.red {
+  color: #DC3546;
+}
+
+.blue {
+  color: #007AFF;
+}
