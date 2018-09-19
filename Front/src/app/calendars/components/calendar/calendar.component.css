@@ -1,3 +1,7 @@
+table {
+  width: 100%;
+}
+
 .hour {
   border-left: 1px solid lightgrey;
   border-right: 1px solid lightgrey;
@@ -34,18 +38,27 @@ span {
   padding: 0.2em;
 }
 
-.green {
-  color: #27A844;
+#legend {
+  text-align: center;
+  padding-top: 0.5em;
 }
 
-.yellow {
-  color: #FEC106;
+ul {
+  list-style: none;
+  padding: 0;
 }
 
-.red {
-  color: #DC3546;
+li {
+  display: inline-block;
+  text-align: center;
+  padding-left: 2%;
+  padding-right: 2%;
 }
 
-.blue {
-  color: #007AFF;
+.row {
+  margin: 0;
+}
+
+.myIcon {
+  margin-right: 3px;
 }

@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { formatDate } from '@angular/common';
 import { FormControl } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
+import { faAngleDown, faCircle } from '@fortawesome/free-solid-svg-icons';
 import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
 import { SocketsService } from './../../shared/socketsService/sockets.service';
@@ -14,8 +15,6 @@ import { ActivatedRoute, Router } from '@angular/router';
   styleUrls: ['./room.component.css']
 })
 export class RoomComponent implements OnInit, OnDestroy {
-  @ViewChild('scan') scanElement: ElementRef;
-
   constructor(
     private httpService: CalendarsService,
     private dataService: DataService,
@@ -32,16 +31,19 @@ export class RoomComponent implements OnInit, OnDestroy {
   events = [];
   nextEvent: Array<any>;
   nextEventPos: number;
+  currentTitle = 'Free';
+  currentColor = '';
 
   // Time and timers
   timeToWaitCancel: number;
   timeToWaitStart: number;
   timeBeforeRemoveMinutes = 1; // Time in minutes before cancel an event
   timeBeforeRemoveMilliSeconds = this.timeBeforeRemoveMinutes * 60 * 1000;
-  timeRefreshMiutes = 10;
-  timeOutRefresh = this.timeRefreshMiutes * 60 * 1000;
+  timeRefreshMinutes = 1;
+  timeOutRefresh = this.timeRefreshMinutes * 60 * 1000;
   timeOutCancel;
   timeOutStart;
+  timeToastr = 1500;
 
   // Sockets
   insertEventConnection;
@@ -49,10 +51,27 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Others
   idCardControl = new FormControl();  // FormControl for scan
-  numberScan: number;
+  showHeaderBool = false;
+  faAngleDown = faAngleDown;
+  faCircle = faCircle;
+  colors = ['green', 'yellow', 'red', 'blue'];
+  colorSignifications = ['Free', 'Meeting expected', 'Meeting in progress/done', 'Transition'];
   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'];
 
+  @ViewChild('scan') scanElement: ElementRef;
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(e) {
+    if (this.showHeaderBool === false) {
+      if (e.clientY <= 30) {
+        this.showHeaderBool = true;
+      }
+    } else {
+      if (e.clientY > 60) {
+        this.showHeaderBool = false;
+      }
+    }
+  }
 
   setRoom(room): void {
     const roomName = this.transformRoomName(room);
@@ -165,9 +184,11 @@ export class RoomComponent implements OnInit, OnDestroy {
             }
           }
           this.events = data;
+          this.eventTitleColor();
         });
     } else {
       this.events = data;
+      this.eventTitleColor();
     }
   }
 
@@ -218,6 +239,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       } else {
         this.cancelTimer(startTime);
       }
+      this.eventTitleColor();
     }, this.timeToWaitStart);
   }
 
@@ -260,18 +282,19 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
 
-  setUserPosition(): void {
-    const idCard = this.idCardControl.value;
+  setUserPosition(idCard): void {
     this.httpService.postUserPosition(idCard, this.selectedRoom['Name'])
       .subscribe(move => {
         if (move === 'in') {
+          this.toastr.success('Check-in successful', '', { timeOut: this.timeToastr });
           this.organizerBeforeCancel();
         } else {
+          this.toastr.success('Check-out successful', '', { timeOut: this.timeToastr });
           this.updateEndEvent();
         }
       }, (err: HttpErrorResponse) => {
         if (err['status'] === 404) {
-          this.toastr.error(err['error'], 'Card', { timeOut: 3000 });
+          this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
         } else if (err['status'] === 500) {
           this.router.navigate(['/server-error', 'Internal Error']);
         }
@@ -290,6 +313,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           if (bool === true) {
             this.events[posCurrentEvent]['type'] = 'danger';
             this.events = this.events.slice();
+            this.eventTitleColor();
             this.newNextEvent();
           }
         });
@@ -335,9 +359,10 @@ export class RoomComponent implements OnInit, OnDestroy {
                 this.events[posInEvents]['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
                 this.events[posInEvents]['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
                 this.events = this.events.slice();
+                this.eventTitleColor();
               }, (err: HttpErrorResponse) => {
                 if (err['status'] === 403) {
-                  this.toastr.error(err['error'], 'Update', { timeOut: 3000 });
+                  this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
                 } else if (err['status'] === 500) {
                   this.router.navigate(['/server-error', 'Internal Error']);
                 }
@@ -356,9 +381,10 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       }, (err: HttpErrorResponse) => {
         if (err['status'] === 403) {
-          this.toastr.error(err['error'], 'Delete', { timeOut: 3000 });
+          this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
           eventToCancel['type'] = 'danger';
           this.events = this.events.slice();
+          this.eventTitleColor();
         } else if (err['status'] === 500) {
           this.router.navigate(['/server-error', 'Internal Error']);
         }
@@ -384,7 +410,6 @@ export class RoomComponent implements OnInit, OnDestroy {
         dateArr[1].split(' ')[1], eventStartHour24, parseInt(eventStartArr[1].split(' ')[0], 10)).getTime();
       const endTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
         dateArr[1].split(' ')[1], eventEndHour24, parseInt(eventEndArr[1].split(' ')[0], 10)).getTime();
-
       if (nowDate === event['date'] && startTime <= nowTime && endTime >= nowTime) {
         currentEvent = event;
         posInEvents = i;
@@ -479,6 +504,22 @@ export class RoomComponent implements OnInit, OnDestroy {
       events = (events.slice(0, index)).concat(events.slice(index + 1));
     }
     return events;
+  }
+
+
+  eventTitleColor(): void {
+    const event = this.eventCurrently();
+    if (event[0]) {
+      this.currentTitle = event[0]['summary'];
+      if (event[0]['type'] === 'danger') {
+        this.currentColor = 'red';
+      } else {
+        this.currentColor = 'yellow';
+      }
+    } else {
+      this.currentTitle = 'Free';
+      this.currentColor = 'green';
+    }
   }
 
 

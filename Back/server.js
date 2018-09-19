@@ -23,19 +23,19 @@ app.get('/', function (req, res) {
 server.listen(process.env.SERVER_PORT);
 
 // Sockets part
-io.sockets.on('connect', (socket) => {
-  ev.on('eventInserted', eventInserted => {
-    socket.emit('eventInserted', eventInserted);
-  });
+// io.sockets.on('connect', (socket) => {
+//   socket.on('disconnection', () => {
+//   });
+// });
 
-  ev.on('eventRemoved', eventRemoved => {
-    socket.emit('eventRemoved', eventRemoved);
-  });
+ev.on('eventInserted', eventInserted => {
+  io.sockets.emit('eventInserted', eventInserted);
+});
 
-  ev.on('updateOccupancy', data => {
-    socket.emit('updateOccupancy', data);
-  });
+ev.on('eventRemoved', eventRemoved => {
+  io.sockets.emit('eventRemoved', eventRemoved);
+});
 
-  socket.on('disconnection', () => {
-  });
+ev.on('updateOccupancy', data => {
+  io.sockets.emit('updateOccupancy', data);
 });

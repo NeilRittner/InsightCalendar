@@ -1,15 +1,50 @@
-<app-header [user]="this.dataService.user" [occupancy]="selectedRoom['Occupancy']">
+<app-header [user]="this.dataService.user">
 </app-header>
 
-<div class="container">
-  <app-calendar [timeScale]="'Week'" [events]="events">
-  </app-calendar>
+<h1 id="roomTitle" *ngIf="selectedRoom['Name']">
+  {{ selectedRoom['Name'].split([' '])[2] }} {{ selectedRoom['Name'].split([' '])[3] }}
+</h1>
 
-  <br>
+<div class="flex-container">
+  <app-calendar id="calendar" [timeScale]="'Week'" [events]="events">
+  </app-calendar>
+  <div id="occupancy">
+    <h5 *ngIf="selectedRoom['Occupancy'] !== undefined">
+      Occupancy
+    </h5>
+  
+    <h1 id="occupancyNumber" *ngIf="selectedRoom['Occupancy'] !== undefined">
+      {{ selectedRoom['Occupancy'] }}
+    </h1>
+  </div>
+</div>
+
+<div class="flex-container">
+  <table id="legend">
+    <tr *ngFor="let color of colors; let i=index">
+      <td>
+        <fa-icon [icon]="faCircle" class="{{color}}"></fa-icon>
+      </td>
+      <td class="tdLegend">
+        <p> {{ colorSignifications[i] }}</p>
+      </td>
+    </tr>
+  </table>
+
+  <div id="eventTitle" class="{{currentColor}}">
+    {{ currentTitle }}
+  </div>
+  
+  <!-- Tweets -->
+  <div id="tweets">
+    Tweets
+  </div>
+</div>
+
+<div id="scan" class="container">
   <form>
-    <div>
-      <input #scan type="password" class="form-control" [formControl]="idCardControl">
-    </div>
+    <input #scan type="password" class="form-control" [formControl]="idCardControl">
     <button (click)="setUserPosition(idCardControl.value)" hidden></button>
   </form>
+  <fa-icon [icon]="faAngleDown" class="fa-3x"></fa-icon>
 </div>

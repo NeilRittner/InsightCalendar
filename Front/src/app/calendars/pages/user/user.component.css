@@ -1,0 +1,9 @@
+/*#################################################################### */
+/* CSS Rules : Global */
+.flex-container {
+  margin: 2.5%;
+}
+
+#calendar {
+  min-width: 600px;
+}

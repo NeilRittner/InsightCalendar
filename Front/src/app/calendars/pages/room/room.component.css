@@ -1,0 +1,72 @@
+/*#################################################################### */
+/* CSS Rules : Global */
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 2.5%
+}
+
+/*#################################################################### */
+/* CSS  */
+#roomTitle {
+  text-align: center;
+  padding-top: 0.3em;
+}
+
+#calendar {
+  flex: 9;
+  min-width: 600px;
+}
+
+#occupancy {
+  padding-top: 1px;
+  flex: 1; 
+  text-align: center;
+}
+
+#occupancy > h5 {
+  font-size: 1em;
+  font-weight: bold;
+}
+
+#occupancyNumber {
+  font-size: 6.5em;
+}
+
+/*#################################################################### */
+/* CSS Second Row */
+#legend {
+  flex: 3;
+  min-width: 200px;
+}
+
+.tdLegend > * {
+  vertical-align : middle;
+  display: inline;
+}
+
+#eventTitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-break: break-all;
+  font-size: 1.5em;
+  flex: 4;
+  min-width: 200px;
+}
+
+#tweets {
+  flex: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-break: break-all;
+  min-width: 200px;
+}
+
+/*#################################################################### */
+/* CSS Scan */
+#scan {
+  text-align: center;
+  width: 200px;
+}

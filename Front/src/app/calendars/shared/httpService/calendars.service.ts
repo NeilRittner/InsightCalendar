@@ -83,10 +83,10 @@ export class CalendarsService {
       .pipe(catchError(err => throwError(err)));
   }
 
-  updateEndEvent(calendarId, eventId, newEnd): Observable<any> {
+  updateEndEvent(organizerEmail, eventId, newEnd): Observable<any> {
     const url = `${environment.serveur_url}api/updateEndEvent`;
     const httpBody = {
-      calendarId: calendarId,
+      organizerEmail: organizerEmail,
       eventId: eventId,
       newEnd: newEnd
     };

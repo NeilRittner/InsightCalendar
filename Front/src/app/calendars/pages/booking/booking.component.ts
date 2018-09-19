@@ -47,11 +47,14 @@ export class BookingComponent implements OnInit {
 
   faTimes = faTimes;  // Icon to remove a participant or clear the room
 
-    init(): void {
-      this.initTime();
-      this.getRooms();
-      this.getAllUsers();
-    }
+  timeToastr = 1500;
+
+
+  init(): void {
+    this.initTime();
+    this.getRooms();
+    this.getAllUsers();
+  }
 
   /**
    *
@@ -213,9 +216,6 @@ export class BookingComponent implements OnInit {
    *
    */
   createEvent(): void {
-    this.errorDate = false;
-    this.errorRoom = false;
-
     if (this.eventLength > 0) {
       const event = {
         title: this.title,
@@ -229,9 +229,10 @@ export class BookingComponent implements OnInit {
       this.httpService.postEvent(event)
         .subscribe(data => {
           if (data) {
-            this.errorRoom = true;
+            this.toastr.error('Room not available', '', { timeOut: this.timeToastr });
           } else {
             this.router.navigate(['/user']);
+            this.toastr.success('Booking successful', '', { timeOut: this.timeToastr });
           }
         }, (err: HttpErrorResponse) => {
           if (err['status'] === 500) {
@@ -239,7 +240,7 @@ export class BookingComponent implements OnInit {
           }
         });
     } else {
-      this.toastr.error('The event start after ending', 'Time Issue', { timeOut: 3000 });
+      this.toastr.error('The event start after ending', '', { timeOut: this.timeToastr });
     }
   }
 

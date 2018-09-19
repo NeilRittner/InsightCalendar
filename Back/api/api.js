@@ -81,7 +81,7 @@ app.post('/googleAccess', function (req, res) {
         });
     })
     .catch(err =>  {
-      res.status(498).send(err);
+      res.status(498).send("Google's token not authenticated");
     });
 });
 
@@ -150,7 +150,7 @@ app.post('/registerCard', function (req, res) {
         });
     })
     .catch(err => {
-      res.status(498).send(err);
+      res.status(498).send("Google's token not authenticated");
     });
 });
 
@@ -189,7 +189,7 @@ app.get('/currentUser', function (req, res) {
     res.send(req.session.userInfo);
   } 
   else { 
-    res.status(500).send('There is no user set');
+    res.status(500).send();
   }
 });
 
@@ -312,7 +312,7 @@ app.post('/updateEndEvent', function (req, res) {
     .then(tokens => {
       if (tokens) {
         authClient.setCredentials(tokens);
-        calendars.updateEndEvent(authClient, req.body.calendarId, req.body.eventId, req.body.newEnd)
+        calendars.updateEndEvent(authClient, req.body.organizerEmail, req.body.eventId, req.body.newEnd)
           .then(eventUpdated => {
             res.status(200).send(eventUpdated);
           })

@@ -17,6 +17,7 @@ import { RoomComponent } from './pages/room/room.component';
 import { BookingComponent } from './pages/booking/booking.component';
 import { HeaderComponent } from './components/header/header.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
+import { CreditsComponent } from './pages/credits/credits.component';
 import { CalendarsService } from './shared/httpService/calendars.service';
 import { DataService } from './shared/dataService/data.service';
 import { SocketsService } from './shared/socketsService/sockets.service';
@@ -54,7 +55,8 @@ const socketsConfig: SocketIoConfig = {
     RoomComponent,
     BookingComponent,
     HeaderComponent,
-    CalendarComponent
+    CalendarComponent,
+    CreditsComponent
   ],
   providers: [
     CalendarsService,

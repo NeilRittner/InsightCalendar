@@ -1,5 +1,4 @@
 import { Component, OnInit, Input, OnChanges } from '@angular/core';
-import { faCircle } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-calendar',
@@ -20,10 +19,7 @@ export class CalendarComponent implements OnInit, OnChanges {
   numberOfWeeksInMonth: number;
   monthDays: Array<any>;
   daysNumber: Array<any>;
-  colors = ['green', 'yellow', 'red', 'blue'];
-  colorSignifications = ['Room Free', 'Meeting expected', 'Meeting in progress/done', 'Transition'];
   timeBeforeRemove = 1;
-  faCircle = faCircle;
 
   ngOnChanges() {
     if (this.timeScale !== 'Month') {

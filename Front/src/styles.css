@@ -1,9 +1,77 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* Imports */
 @import '~bootstrap/dist/css/bootstrap.css';
 @import '~font-awesome/css/font-awesome.css';
 @import '~@angular/material/prebuilt-themes/deeppurple-amber.css';
 @import '~ngx-toastr/toastr.css';
 
+/* General class */
+/* Cursor */
 .cursor {
   cursor: pointer;
+}
+
+/* Google Button */
+/* Google button */
+.google-button {
+  height: 40px;
+  border-width: 0;
+  background: white;
+  color: #737373;
+  border-radius: 5px;
+  white-space: nowrap;
+  box-shadow: 1px 1px 0px 1px rgba(0,0,0,0.05);
+  transition-property: background-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease-in-out;
+  padding: 0;
+  margin: 0 10px 10px 10px;
+}
+  
+.google-button:focus, .google-button:hover {
+  box-shadow: 1px 4px 5px 1px rgba(0,0,0,0.1);
+}
+
+.google-button:active {
+  background-color: #e5e5e5;
+  box-shadow: none;
+  transition-duration: 10ms;
+}
+    
+.google-button__icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-bottom: 10px;
+  margin-left: 10px;
+  width: 20px;
+  height: 20px;
+}
+
+.google-button__text {
+  display: inline-block;
+  padding: 0 24px;
+  font-size: 14px;
+}
+
+/* Font family */
+/* h2, label, li, td, th {
+  font-family: Arial, Helvetica, sans-serif;
+} */
+
+/* Colors for text */
+.green {
+  color: #27A844;
+}
+
+.yellow {
+  color: #FEC106;
+}
+
+.red {
+  color: #DC3546;
+}
+
+.blue {
+  color: #007AFF;
 }
