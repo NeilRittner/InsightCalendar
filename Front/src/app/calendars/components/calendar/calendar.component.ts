@@ -54,7 +54,6 @@ export class CalendarComponent implements OnInit, OnChanges {
               this.pushInDays(indexInDays, valueBefore, 'success', '');
             }
           }
-
           /* ValueAfter */
           let valueAfter;
           if (this.events[i + 1] && this.events[i + 1]['date'] === event['date']) {
@@ -64,7 +63,6 @@ export class CalendarComponent implements OnInit, OnChanges {
           } else {
             valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
           }
-
           if (valueEvent > 0) {
             if (valueAfter > 0 || (this.events[i + 1] && this.events[i + 1]['date'] !== event['date'])) {
               this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);

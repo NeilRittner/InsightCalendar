@@ -112,4 +112,13 @@ export class CalendarsService {
       .get(url, httpOptions)
       .pipe(catchError(err => throwError(err)));
   }
+
+  organizersScan(idCard, organizerEmail, eventId): Observable<any> {
+    const url = `${environment.serveur_url}api/organizersScan?idCard=${idCard}` +
+      `&organizerEmail=${organizerEmail}&eventId=${eventId}`;
+    const httpOptions = { responseType: 'text' as 'text', withCredentials: true };
+    return this.http
+      .get(url, httpOptions)
+      .pipe(catchError(err => throwError(err)));
+  }
 }

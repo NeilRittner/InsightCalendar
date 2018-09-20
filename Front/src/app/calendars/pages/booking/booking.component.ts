@@ -216,7 +216,7 @@ export class BookingComponent implements OnInit {
    *
    */
   createEvent(): void {
-    if (this.eventLength > 0) {
+    if (this.eventLength > 0 && this.selectedRoom) {
       const event = {
         title: this.title,
         startDate: this.startDate,
@@ -239,8 +239,10 @@ export class BookingComponent implements OnInit {
             this.router.navigate(['/server-error', 'Internal Error']);
           }
         });
-    } else {
+    } else if (this.eventLength <= 0) {
       this.toastr.error('The event start after ending', '', { timeOut: this.timeToastr });
+    } else if (!this.selectedRoom) {
+      this.toastr.error('Please select a room', '', { timeOut: this.timeToastr });
     }
   }
 

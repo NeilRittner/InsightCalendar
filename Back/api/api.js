@@ -223,6 +223,7 @@ app.post('/createEvent', function (req, res) {
       }
     })
     .catch(err => {
+      console.log(err);
       res.status(500).send(err);
     });
 });
@@ -288,7 +289,8 @@ app.post('/cancelEvent', function (req, res) {
         authClient.setCredentials(tokens);
         calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId)
           .then(eventRemoved => {
-            ev.emit('eventRemoved', eventRemoved)
+            console.log('eventRemoved');
+            ev.emit('eventRemoved', eventRemoved);
             res.status(200).send(eventRemoved);
           })
           .catch(err => {
@@ -349,6 +351,23 @@ app.get('/organizersAttendance', function (req, res) {
   util.organizersAttendance(req.query.organizerEmail, req.query.eventId, req.query.roomName)
     .then(response => {
       res.status(200).send(response);
+    })
+    .catch(err => {
+      res.status(500).send(err);
+    });
+});
+
+/**
+ * 
+ */
+app.get('/organizersScan', function (req, res) {
+  util.organizersScan(req.query.idCard, req.query.organizerEmail, req.query.eventId)
+    .then(response => {
+      if (response !== null) {
+        res.status(200).send(response);
+      } else {
+        res.status(404).send('No user associated to this card');
+      }
     })
     .catch(err => {
       res.status(500).send(err);

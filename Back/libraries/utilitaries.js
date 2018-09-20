@@ -171,5 +171,34 @@ module.exports = {
         }
       });
     });
+  },
+
+  organizersScan: function (idCard, organizerEmail, eventId) {
+    return new Promise((resolve, reject) => {
+      this.getSecondOrganizer(eventId)
+        .then(orga2Email => {
+          let query = `SELECT Email FROM users WHERE IdCard = ${idCard}`;
+          
+          pool.calendar_pool.query(query, function (err, row) {
+            if (!err) {
+              if (row[0] !== undefined) {
+                if (row[0]['Email'] === organizerEmail || row[0]['Email'] === orga2Email) {
+                  resolve('yes');
+                } else {
+                  resolve('no');
+                }
+              } else {
+                resolve(null);
+              }
+            }
+            else {
+              reject(err);
+            }
+          });
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
   }
 };

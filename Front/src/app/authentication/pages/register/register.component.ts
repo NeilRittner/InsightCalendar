@@ -40,7 +40,7 @@ export class RegisterComponent implements OnInit {
           window.location.href = data;
         } else {
           this.router.navigate(['/user']);
-          this.toastr.error('Registeration successful', '', { timeOut: 3000 });
+          this.toastr.success('Registeration successful', '', { timeOut: 3000 });
         }
       }, (err: HttpErrorResponse) => {
         if (err['status'] === 498) {

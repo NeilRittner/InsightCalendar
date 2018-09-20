@@ -8,6 +8,8 @@ import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
 import { SocketsService } from './../../shared/socketsService/sockets.service';
 import { ActivatedRoute, Router } from '@angular/router';
+// import { setInterval } from 'timers';
+import { interval } from 'rxjs';
 
 @Component({
   selector: 'app-room',
@@ -29,7 +31,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Events
   events = [];
-  nextEvent: Array<any>;
+  nextEvent;
   nextEventPos: number;
   currentTitle = 'Free';
   currentColor = '';
@@ -40,10 +42,11 @@ export class RoomComponent implements OnInit, OnDestroy {
   timeBeforeRemoveMinutes = 1; // Time in minutes before cancel an event
   timeBeforeRemoveMilliSeconds = this.timeBeforeRemoveMinutes * 60 * 1000;
   timeRefreshMinutes = 1;
-  timeOutRefresh = this.timeRefreshMinutes * 60 * 1000;
+  timeRefresh = this.timeRefreshMinutes * 60 * 1000;
+  timeToastr = 1500;
   timeOutCancel;
   timeOutStart;
-  timeToastr = 1500;
+  timeOutRefresh;
 
   // Sockets
   insertEventConnection;
@@ -51,7 +54,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   // Others
   idCardControl = new FormControl();  // FormControl for scan
-  showHeaderBool = false;
+  // showHeaderBool = false;
   faAngleDown = faAngleDown;
   faCircle = faCircle;
   colors = ['green', 'yellow', 'red', 'blue'];
@@ -60,18 +63,18 @@ export class RoomComponent implements OnInit, OnDestroy {
     'August', 'September', 'October', 'November', 'December'];
 
   @ViewChild('scan') scanElement: ElementRef;
-  @HostListener('document:mousemove', ['$event'])
-  onMouseMove(e) {
-    if (this.showHeaderBool === false) {
-      if (e.clientY <= 30) {
-        this.showHeaderBool = true;
-      }
-    } else {
-      if (e.clientY > 60) {
-        this.showHeaderBool = false;
-      }
-    }
-  }
+  // @HostListener('document:mousemove', ['$event'])
+  // onMouseMove(e) {
+  //   if (this.showHeaderBool === false) {
+  //     if (e.clientY <= 30) {
+  //       this.showHeaderBool = true;
+  //     }
+  //   } else {
+  //     if (e.clientY > 60) {
+  //       this.showHeaderBool = false;
+  //     }
+  //   }
+  // }
 
   setRoom(room): void {
     const roomName = this.transformRoomName(room);
@@ -122,70 +125,79 @@ export class RoomComponent implements OnInit, OnDestroy {
 
 
   refreshCalendarTimer(): void {
-    setTimeout(() => {
-      this.setCalendar(this.selectedRoom['Email']);
-      this.refreshCalendarTimer();
-    }, this.timeOutRefresh);
+    this.timeOutRefresh = interval(this.timeRefresh)
+      .subscribe(() => {
+        this.setCalendar(this.selectedRoom['Email']);
+      });
   }
 
 
   calendarTreatments(data: any): void {
-    this.events = [];
-    this.nextEvent = [];
+    console.log('treatments');
+    // Clear the timers
+    this.clearTimers();
 
     for (let i = 0; i < data.length; i++) {
       const event = data[i];
+
+      // Some treatments for the date and start/end time
       event['date'] = this.extractDate(event['start']['dateTime']);
       event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
       event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
 
-      const nowShiftTime = new Date().getTime() - this.timeBeforeRemoveMilliSeconds;
-      const startTime = this.determineStartTime(event);
-      if (this.nextEvent.length === 0 && nowShiftTime < startTime) {
+      // Determine the color of the events 1
+      const nowTime = new Date().getTime();
+      const startTimeEvent = this.determineStartTime(event);
+      if (startTimeEvent > nowTime) {
+        event['type'] = 'warning';
+      } else {
+        event['type'] = 'danger';
+      }
+
+      // Determine the nextEvent (next event which could be cancelled) 1
+      if (!this.nextEvent && (startTimeEvent + this.timeBeforeRemoveMilliSeconds) > nowTime) {
         event['type'] = 'warning';
         this.nextEvent = event;
         this.nextEventPos = i;
-      } else {
-        if (nowShiftTime <= startTime) {
-          event['type'] = 'warning';
-        } else {
-          event['type'] = 'danger';
-        }
       }
     }
 
-    if (this.nextEvent.length !== 0) {
-      this.organizersAttendance(this.nextEvent)
-        .then(bool => {
-          const nowTime = new Date().getTime();
-          let startTime = this.determineStartTime(this.nextEvent);
-          if (bool === false || (bool === true && nowTime < startTime)) {
-            this.timeToWaitStart = startTime - nowTime;
-            if (this.timeToWaitStart < 0) {
-              this.timeToWaitStart = 0;
-            }
-            this.startTimer(startTime);
-          } else {
-            if (data[this.nextEventPos + 1]) {
-              data[this.nextEventPos]['type'] = 'danger';
-              data[this.nextEventPos + 1]['type'] = 'warning';
-              this.nextEvent = data[this.nextEventPos + 1];
-              this.nextEventPos = this.nextEventPos + 1;
-
-              startTime = this.determineStartTime(this.nextEvent);
-              this.timeToWaitStart = startTime - nowTime;
+    // Determine the nextEvent (the real nextEvent) 2
+    if (this.nextEvent) {
+      const nowTime = new Date().getTime();
+      let startTimeNextEvent = this.determineStartTime(this.nextEvent);
+      if (startTimeNextEvent > nowTime) {
+        // Launch the timer to verify the presence of the organizer(s) at the beginning of the meeting
+        this.startTimer(startTimeNextEvent);
+        this.events = data;
+        this.eventTitleColor();
+      } else {
+        this.organizersAttendance(this.nextEvent)
+          .then(bool => {
+            if (bool === false) {
+              // Launch the timer to verify the presence of the organizer(s)
+              this.timeToWaitStart = startTimeNextEvent - nowTime;
               if (this.timeToWaitStart < 0) {
                 this.timeToWaitStart = 0;
               }
-              this.startTimer(startTime);
+              this.startTimer(startTimeNextEvent);
             } else {
-              this.nextEvent = [];
-              this.nextEventPos = -1;
+              // The organizer(s) are in the meeting, then the real nextEvent is the following one
+              if (data[this.nextEventPos + 1]) {
+                data[this.nextEventPos]['type'] = 'danger'; // Because meeting in progress
+                this.nextEvent = data[this.nextEventPos + 1];
+                this.nextEventPos = this.nextEventPos + 1;
+
+                startTimeNextEvent = this.determineStartTime(this.nextEvent);
+                this.timeToWaitStart = startTimeNextEvent - nowTime;
+                this.startTimer(startTimeNextEvent);
+              } else {
+                this.nextEvent = null;
+                this.nextEventPos = -1;
+              }
             }
-          }
-          this.events = data;
-          this.eventTitleColor();
-        });
+          });
+      }
     } else {
       this.events = data;
       this.eventTitleColor();
@@ -224,23 +236,22 @@ export class RoomComponent implements OnInit, OnDestroy {
 
 
   startTimer(startTime): void {
-    setTimeout(() => {
-      if (this.selectedRoom['Occupancy'] > 0) {
-        this.organizersAttendance(this.nextEvent)
-          .then(bool => {
-            if (bool === true) {
-              this.events[this.nextEventPos]['type'] = 'danger';
-              this.events = this.events.slice();
-              this.newNextEvent();
-            } else {
-              this.cancelTimer(startTime);
-            }
-          });
-      } else {
-        this.cancelTimer(startTime);
-      }
-      this.eventTitleColor();
-    }, this.timeToWaitStart);
+    const nowTime = new Date().getTime();
+    const timeToWaitStart = startTime - nowTime;
+
+    this.timeOutStart = setTimeout(() => {
+      this.organizersAttendance(this.nextEvent)
+        .then(bool => {
+          if (bool === true) {
+            this.events[this.nextEventPos]['type'] = 'danger';
+            this.events = this.events.slice();
+            this.newNextEvent();
+          } else {
+            this.cancelTimer(startTime);
+          }
+          this.eventTitleColor();
+        });
+    }, timeToWaitStart);
   }
 
 
@@ -290,7 +301,19 @@ export class RoomComponent implements OnInit, OnDestroy {
           this.organizerBeforeCancel();
         } else {
           this.toastr.success('Check-out successful', '', { timeOut: this.timeToastr });
-          this.updateEndEvent();
+
+          // Update the end of the event if necessary
+          const res = this.eventCurrently();
+          const currentEvent = res[0];
+          const posCurrentEvent = res[1];
+          if (currentEvent) {
+            this.organizersScan(idCard, currentEvent)
+              .then(bool => {
+                if (bool === true) {
+                  this.updateEndEvent(currentEvent, posCurrentEvent);
+                }
+              });
+          }
         }
       }, (err: HttpErrorResponse) => {
         if (err['status'] === 404) {
@@ -320,6 +343,47 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
+  organizersScan(idCard, event): Promise<boolean> {
+    return new Promise((resolve) => {
+      const organizer = event['creator'] ? event['creator']['email'] : event['organizer']['email'];
+      this.httpService.organizersScan(idCard, organizer, event['id'])
+        .subscribe(response => {
+          if (response === 'yes') {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        }, (err: HttpErrorResponse) => {
+          if (err['status'] === 404) {
+            this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
+          } else if (err['status'] === 500) {
+            this.router.navigate(['/server-error', 'Internal Error']);
+          }
+        });
+    });
+  }
+
+  updateEndEvent(event, posEvent): void {
+    this.organizersAttendance(event)
+      .then(bool => {
+        if (bool === false) {
+          this.httpService.updateEndEvent(event['organizer']['email'], event['id'], new Date())
+            .subscribe(eventUpdated => {
+              this.events[posEvent]['date'] = this.extractDate(eventUpdated['start']['dateTime']);
+              this.events[posEvent]['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
+              this.events[posEvent]['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
+              this.events = this.events.slice();
+              this.eventTitleColor();
+            }, (err: HttpErrorResponse) => {
+              if (err['status'] === 403) {
+                this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
+              } else if (err['status'] === 500) {
+                this.router.navigate(['/server-error', 'Internal Error']);
+              }
+            });
+        }
+      });
+  }
 
   newNextEvent(): void {
     this.clearTimers();
@@ -327,16 +391,13 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.nextEvent = this.events[this.nextEventPos + 1];
       this.nextEventPos = this.nextEventPos + 1;
       const now = new Date();
-      const startTimeArr = this.nextEvent['start']['dateTime'].split(':');
-      const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
-      const dateArr = this.nextEvent['date'].split(', ');
-      const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-        dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
+      const startTime = this.determineStartTime(this.nextEvent);
       this.timeToWaitStart = startTime - now.getTime();
       if (this.timeToWaitStart < 0) {
         this.timeToWaitStart = 0;
       }
       this.startTimer(startTime);
+      console.log(this.timeToWaitStart);
     } else {
       this.nextEvent = [];
       this.nextEventPos = -1;
@@ -344,41 +405,10 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
 
-  updateEndEvent(): void {
-    const res = this.eventCurrently();
-    const currentEvent = res[0];
-    const posInEvents = res[1];
-
-    if (currentEvent) {
-      this.organizersAttendance(currentEvent)
-        .then(bool => {
-          if (bool === false) {
-            this.httpService.updateEndEvent(currentEvent['organizer']['email'], currentEvent['id'], new Date())
-              .subscribe(eventUpdated => {
-                this.events[posInEvents]['date'] = this.extractDate(eventUpdated['start']['dateTime']);
-                this.events[posInEvents]['start']['dateTime'] = this.extractTime(eventUpdated['start']['dateTime']);
-                this.events[posInEvents]['end']['dateTime'] = this.extractTime(eventUpdated['end']['dateTime']);
-                this.events = this.events.slice();
-                this.eventTitleColor();
-              }, (err: HttpErrorResponse) => {
-                if (err['status'] === 403) {
-                  this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
-                } else if (err['status'] === 500) {
-                  this.router.navigate(['/server-error', 'Internal Error']);
-                }
-              });
-          }
-        });
-    }
-  }
-
-
   cancelEvent(eventToCancel, roomEmail): void {
     this.httpService.cancelEvent(eventToCancel['organizer']['email'], eventToCancel['id'], roomEmail)
       .subscribe(eventRemoved => {
-        if (this.selectedRoom && this.isRoom(this.selectedRoom['Email'], eventRemoved['attendees'])) {
-          this.removeEvent(eventRemoved['id']);
-        }
+        this.removeEvent(eventRemoved['id']);
       }, (err: HttpErrorResponse) => {
         if (err['status'] === 403) {
           this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
@@ -426,7 +456,6 @@ export class RoomComponent implements OnInit, OnDestroy {
         if (this.isRoom(this.selectedRoom['Email'], data['attendees'])) {
           this.getCalendar(this.selectedRoom['Email'])
             .then(dataGet => {
-              this.clearTimers();
               const newEventStartTime = new Date(data['start']['dateTime'].split('+')[0]).getTime();
               let newEvents;
               let index = -1;
@@ -483,12 +512,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.getCalendar(this.selectedRoom['Email'])
       .then(data => {
         const newEvents = this.removeEventInList(data, eventId);
-        if (newEvents.length !== 0) {
-          data = newEvents;
-          this.calendarTreatments(data);
-        } else {
-          this.removeEvent(eventId);
-        }
+        this.nextEvent = null;
+        this.calendarTreatments(newEvents);
       });
   }
 
