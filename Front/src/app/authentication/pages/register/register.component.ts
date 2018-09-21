@@ -20,11 +20,15 @@ export class RegisterComponent implements OnInit {
     private toastr: ToastrService
   ) { }
 
-  @ViewChild('scan') scanElement: ElementRef;
+  @ViewChild('scan') scanElement: ElementRef; // The scanElement
   idCardControl = new FormControl();  // FormControl for scan
-  private idToken: string;
+  private idToken: string;  // The token sent by Google when user login with his Google account
 
-  signinWithGoogle() {
+  /**
+   * Calls when the user login with his Google account
+   * Enables the scanElement and stores the Google token in 'idToken'
+   */
+  signinWithGoogle(): void {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
     this.socialAuthService.signIn(socialPlatformProvider).then((userData) => {
       this.idToken = userData.idToken;
@@ -33,16 +37,23 @@ export class RegisterComponent implements OnInit {
     });
   }
 
-  registerCard(idCard) {
+  /**
+   * @param {*} idCard: the id/number of the scanned card
+   * Calls when the user scans his card to register and log-in
+   */
+  registerCard(idCard): void {
     this.service.postRegisterCard(this.idToken, idCard)
       .subscribe((data: string) => {
         if (data) {
+          // data = url of the authorization page
           window.location.href = data;
         } else {
+          // No data: the user has already authorized the application
           this.router.navigate(['/user']);
           this.toastr.success('Registeration successful', '', { timeOut: 3000 });
         }
       }, (err: HttpErrorResponse) => {
+        // Error 498: fake token
         if (err['status'] === 498) {
           this.toastr.error(err['error'], '', { timeOut: 3000 });
         } else if (err['status'] === 500) {
@@ -52,6 +63,7 @@ export class RegisterComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Disable the scanElement
     this.idCardControl.disable();
   }
 

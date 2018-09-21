@@ -28,17 +28,14 @@ export class BookingComponent implements OnInit {
   startDate: Date;  // Start date of the event
   endDate: Date;  // End date of the event
   eventLength = 60; // Length of the event, in minutes
-  errorDate = false;
 
   roomsControl = new FormControl(); // FormControl for room
   roomsAutocomplete = []; // Autocomplete of rooms
   filteredRooms: Observable<any>; // List of rooms filtered according to box content
-  selectedRoom;
-  errorRoom = false;
+  selectedRoom; // The room selected for the meeting
 
-
-  coOrgaControl = new FormControl();
-  coOrga = null;
+  coOrgaControl = new FormControl();  // FormControl for the co-organizer
+  coOrga = null;  // The co-organizer
 
   attendeesControl = new FormControl();  // FormControl for autocomplete
   attendeesAutocomplete = []; // Autocomplete of attendees which are not selected
@@ -47,9 +44,12 @@ export class BookingComponent implements OnInit {
 
   faTimes = faTimes;  // Icon to remove a participant or clear the room
 
-  timeToastr = 1500;
+  timeToastr = 1500;  // Toastr notifications time
 
 
+  /**
+   * This function calls the functions to initialize the autocompletes and the timepickers
+   */
   init(): void {
     this.initTime();
     this.getRooms();
@@ -57,7 +57,7 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * This function initializes the timepickers
    */
   initTime(): void {
     const now = new Date();
@@ -71,21 +71,22 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * This function changes the end time of the event according to start time and the length
    */
   changeEnd(): void {
     this.endDate = new Date(this.startDate.getTime() + this.eventLength * 60 * 1000);
   }
 
   /**
-   *
+   * This function changes the length of the event according to the start and end dates
    */
   changeEventLength(): void {
     this.eventLength = (this.endDate.getTime() - this.startDate.getTime()) / (60 * 1000);
   }
 
   /**
-   *
+   * After getting the information about the rooms,
+   * this function calls the function to initialize the room autocomplete
    */
   getRooms(): void {
     this.httpService.getAllRooms()
@@ -100,16 +101,17 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * @param {string} name: the room autocomplete value
+   * This function filters the rooms according to the name
+   * @return: return the new list of rooms according to the autocomplete value
    */
   roomsFilter(name: string) {
     const filterValue = name.toLowerCase();
-
     return this.roomsAutocomplete.filter(room => (room['Name']).toLowerCase().includes(filterValue));
   }
 
   /**
-   *
+   * This function initializes the room autocomplete
    */
   setFilteredRoomsAutocomplete(): void {
     this.filteredRooms = this.roomsControl.valueChanges
@@ -120,23 +122,24 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * @param room: the room selected by the user in the autocomplete
+   * This function sets the selected room according to the user choice
    */
   setRoom(room): void {
     this.selectedRoom = room;
   }
 
   /**
-   *
+   * This function clear the autocomplete if the user wants to change the room
    */
   clearRoom(): void {
-    this.errorRoom = false;
     this.selectedRoom = null;
     this.roomsControl.reset();
   }
 
   /**
-   *
+   * @param coOrga: the co-organizer selected by the user
+   * This function sets the co-organizer according to the user choice
    */
   setCoOrga(coOrga): void {
     this.coOrga = coOrga;
@@ -144,7 +147,7 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * This function clear the autocomplete if the user wants to change the co-organizer
    */
   clearCoOrga(): void {
     this.removeAttendee(this.coOrga);
@@ -153,7 +156,9 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * After getting the information about the rooms,
+   * this function calls the function to initialize the attendee autocomplete
+   * This function adds also the connected user as attendee (not removable)
    */
   getAllUsers(): void {
     this.httpService.getAllUsers()
@@ -169,11 +174,12 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * @param {string} name: the attendee autocomplete value
+   * This function filters the attendees according to the name
+   * @return: return the new list of attendees according to the autocomplete value
    */
   attendeesFilter(name: string) {
     const filterValue = name.toLowerCase();
-
     return this.attendeesAutocomplete
       .filter(attendee => (attendee['FirstName'] + ' ' + attendee['LastName'])
         .toLowerCase()
@@ -181,18 +187,19 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * This function initializes the attendee autocomplete
    */
   setFilteredAttendeesAutcomplete(): void {
     this.filteredAttendees = this.attendeesControl.valueChanges
       .pipe(
         startWith(''),
-      map(name => name ? this.attendeesFilter(name) : this.attendeesAutocomplete.slice()),
+        map(name => name ? this.attendeesFilter(name) : this.attendeesAutocomplete.slice()),
       );
   }
 
   /**
-   *
+   * @param attendee: an attendee
+   * This function adds the given attendee in the participants list
    */
   addAttendee(attendee): void {
     this.attendeesList.push(attendee);
@@ -203,7 +210,8 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * @param attendee: an attendee
+   * This function removes the given attendee from the participants list
    */
   removeAttendee(attendee): void {
     const index = this.attendeesList.findIndex(att => att['Email'] === attendee['Email']);
@@ -213,7 +221,8 @@ export class BookingComponent implements OnInit {
   }
 
   /**
-   *
+   * This function verifies the start and end dates of the event,
+   * if the dates are good, it calls a function to post the event to the server
    */
   createEvent(): void {
     if (this.eventLength > 0 && this.selectedRoom) {

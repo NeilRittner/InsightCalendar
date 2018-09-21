@@ -8,7 +8,6 @@ import { CalendarsService } from '../../shared/httpService/calendars.service';
 import { DataService } from './../../shared/dataService/data.service';
 import { SocketsService } from './../../shared/socketsService/sockets.service';
 import { ActivatedRoute, Router } from '@angular/router';
-// import { setInterval } from 'timers';
 import { interval } from 'rxjs';
 
 @Component({
@@ -30,39 +29,39 @@ export class RoomComponent implements OnInit, OnDestroy {
   selectedRoom = []; // Array with the 'Name', the 'Email', and the 'Occupancy' of the selected room
 
   // Events
-  events = [];
-  nextEvent;
-  nextEventPos: number;
-  currentTitle = 'Free';
-  currentColor = '';
+  events = [];  // The events
+  nextEvent;  // The next event (= the next which can be deleted automatically)
+  nextEventPos: number; // The position in 'events' of the next event
+  currentTitle = 'Free';  // The title of the event in progress (or Free is no event)
+  currentColor = '';  // The color of the title displayed
 
   // Time and timers
-  timeToWaitCancel: number;
-  timeToWaitStart: number;
   timeBeforeRemoveMinutes = 1; // Time in minutes before cancel an event
-  timeBeforeRemoveMilliSeconds = this.timeBeforeRemoveMinutes * 60 * 1000;
-  timeRefreshMinutes = 1;
-  timeRefresh = this.timeRefreshMinutes * 60 * 1000;
-  timeToastr = 1500;
-  timeOutCancel;
-  timeOutStart;
-  timeOutRefresh;
+  timeBeforeRemoveMilliSeconds = this.timeBeforeRemoveMinutes * 60 * 1000;  // Time in milliseconds before cancel an event
+  timeRefreshMinutes = 1; // Time in minutes before refresh the calendar
+  timeRefresh = this.timeRefreshMinutes * 60 * 1000;  // Time in milliseconds before refresh the calendar
+  timeToastr = 1500;  // Toastr notifications time
+  timeOutCancel;  // Will be used to keep in memory the setTimeOut to cancel an event
+  timeOutStart; // Will be used to keep in memory the setTimeOut to verify the attendancy at the beginning of an event
+  timeOutRefresh; // Will be used to keep in memory the interval to refresh the page
 
   // Sockets
-  insertEventConnection;
-  updateRoomOccupancy;
+  insertEventConnection;  // The socket to know when an event is inserted
+  updateRoomOccupancy;  // The socket to know when an event is updated
 
   // Others
   idCardControl = new FormControl();  // FormControl for scan
-  // showHeaderBool = false;
-  faAngleDown = faAngleDown;
-  faCircle = faCircle;
-  colors = ['green', 'yellow', 'red', 'blue'];
-  colorSignifications = ['Free', 'Meeting expected', 'Meeting in progress/done', 'Transition'];
+  // showHeaderBool = false;  // To make the header hidden or not
+  faAngleDown = faAngleDown;  // The arrow
+  faCircle = faCircle;  // The circles for the legend
+  colors = ['green', 'yellow', 'red', 'blue'];  // Colors for the legend
+  colorSignifications = ['Free', 'Meeting expected', 'Meeting in progress/done', 'Transition']; // Legend
   months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'];
 
-  @ViewChild('scan') scanElement: ElementRef;
+  @ViewChild('scan') scanElement: ElementRef; // The scan Element
+
+  // To make the header hidden or not according to the mouse position
   // @HostListener('document:mousemove', ['$event'])
   // onMouseMove(e) {
   //   if (this.showHeaderBool === false) {
@@ -76,9 +75,13 @@ export class RoomComponent implements OnInit, OnDestroy {
   //   }
   // }
 
+  /**
+   * @param room: The name of the room without space
+   * This function calls different functions to iniatialize the page
+   */
   setRoom(room): void {
     const roomName = this.transformRoomName(room);
-    this.removeSockets();
+    this.removeSockets(); // Remove the sockets because not remove if the previous page was a room
     this.httpService.getRoomInformation(roomName)
       .subscribe(dataRoom => {
         this.selectedRoom = dataRoom;
@@ -89,7 +92,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
   }
 
-
+  /**
+   * @param {string} roomName: the name of the room
+   * This function returns the full name of the room to request the database
+   * @return {string}: The full name of the room
+   */
   transformRoomName(roomName: string): string {
     const arrayName = roomName.split(/(?=[A-Z])/);
     let prefix = 'NUIG ';
@@ -101,18 +108,25 @@ export class RoomComponent implements OnInit, OnDestroy {
     return prefix + arrayName[0] + ' ' + arrayName[1];
   }
 
-
-  setCalendar(roomEmail): void {
+  /**
+   * @param {string} roomEmail: the email of the room
+   * This function calls the function to get and set the calendar of the room
+   */
+  setCalendar(roomEmail: string): void {
     this.getCalendar(roomEmail)
       .then(data => {
         this.calendarTreatments(data);
       });
   }
 
-
-  getCalendar(calendarId): Promise<any> {
+  /**
+   * @param roomEmail: the email of the room
+   * This function call a function to get the calendar of the given room
+   * @return {Promise<any>}: Promise with an array of events
+   */
+  getCalendar(roomEmail): Promise<any> {
     return new Promise((resolve) => {
-      this.httpService.getCalendar(calendarId)
+      this.httpService.getCalendar(roomEmail)
         .subscribe(data => {
           resolve(data);
         }, (err: HttpErrorResponse) => {
@@ -123,7 +137,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
   }
 
-
+  /**
+   * This function refresh automatically the page
+   */
   refreshCalendarTimer(): void {
     this.timeOutRefresh = interval(this.timeRefresh)
       .subscribe(() => {
@@ -131,7 +147,10 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
   }
 
-
+  /**
+   * @param {any} data: the array of events
+   * This function do some treatments on the events (on the dates and types) and determine the next event
+   */
   calendarTreatments(data: any): void {
     console.log('treatments');
     // Clear the timers
@@ -176,10 +195,6 @@ export class RoomComponent implements OnInit, OnDestroy {
           .then(bool => {
             if (bool === false) {
               // Launch the timer to verify the presence of the organizer(s)
-              this.timeToWaitStart = startTimeNextEvent - nowTime;
-              if (this.timeToWaitStart < 0) {
-                this.timeToWaitStart = 0;
-              }
               this.startTimer(startTimeNextEvent);
             } else {
               // The organizer(s) are in the meeting, then the real nextEvent is the following one
@@ -187,9 +202,7 @@ export class RoomComponent implements OnInit, OnDestroy {
                 data[this.nextEventPos]['type'] = 'danger'; // Because meeting in progress
                 this.nextEvent = data[this.nextEventPos + 1];
                 this.nextEventPos = this.nextEventPos + 1;
-
                 startTimeNextEvent = this.determineStartTime(this.nextEvent);
-                this.timeToWaitStart = startTimeNextEvent - nowTime;
                 this.startTimer(startTimeNextEvent);
               } else {
                 this.nextEvent = null;
@@ -204,8 +217,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
-
-  determineStartTime(event): number {
+  /**
+   * @param {any} event: an event (JSON Object)
+   * This function determines the start time of the given event
+   * @return {number}: the start time in milliseconds
+   */
+  determineStartTime(event: any): number {
     const startTimeArr = event['start']['dateTime'].split(':');
     const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
     const dateArr = event['date'].split(', ');
@@ -215,9 +232,14 @@ export class RoomComponent implements OnInit, OnDestroy {
     return startTime;
   }
 
-
-  organizersAttendance(event): Promise<any> {
+  /**
+   * @param {any} event: an event (JSON Object)
+   * This function allow to know if the organizer (or one of them if multiple) are in the meeting
+   * @return {Promise<any>}: Promise with a boolean: true if one of the organizer is in the meeting, false if not
+   */
+  organizersAttendance(event: any): Promise<any> {
     return new Promise((resolve) => {
+      // Do this because sometime the ['organizer'] is not the organizer but it's the creator
       const orga = event['creator'] ? event['creator']['email'] : event['organizer']['email'];
       this.httpService.organizersAttendance(orga, event['id'], this.selectedRoom['Name'])
       .subscribe(response => {
@@ -234,8 +256,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
   }
 
-
-  startTimer(startTime): void {
+  /**
+   * @param {number} startTime: the start time of an event (which is the next event)
+   * This function starts a setTimeOut. When the timeOut is finished, it verifies if one of the organizers
+   * is in the meeting. If no one is in, it calls the function to start the cancel timeOut.
+   * If one of them is here, it changes the next event and sets the meeting as 'in progress'
+   */
+  startTimer(startTime: number): void {
     const nowTime = new Date().getTime();
     const timeToWaitStart = startTime - nowTime;
 
@@ -244,7 +271,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         .then(bool => {
           if (bool === true) {
             this.events[this.nextEventPos]['type'] = 'danger';
-            this.events = this.events.slice();
+            this.events = this.events.slice();  // To refresh the calendar, else the calendar is not refresh
             this.newNextEvent();
           } else {
             this.cancelTimer(startTime);
@@ -254,8 +281,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     }, timeToWaitStart);
   }
 
-
-  cancelTimer(startTime): void {
+  /**
+   * @param {number} startTime: the start time of an event (which is the next event)
+   * This function starts a setTimeOut. When the timeOut is finished, it cancels the nextEvent
+   * (which is in fact the currentEvent) because any organizer is in the meeting
+   */
+  cancelTimer(startTime: number): void {
     const nowTime = new Date().getTime();
     const timeToWaitCancel = startTime - nowTime + this.timeBeforeRemoveMilliSeconds;
     this.timeOutCancel = setTimeout(() => {
@@ -263,7 +294,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     }, timeToWaitCancel);
   }
 
-
+  /**
+   * This function cancel the timeOut if they are set
+   */
   clearTimers(): void {
     if (this.timeOutStart) {
       clearTimeout(this.timeOutStart);
@@ -274,17 +307,31 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
 
+  /**
+   * @param {string} dateISOS: a date in the format ISO
+   * This function extracts the date (Year, Month, Day) in the given date
+   * @return {string}: a string which gives the Year, Month, Day
+   */
   extractDate(dateISOS: string): string {
     return formatDate(dateISOS, 'fullDate', 'en-US');
   }
 
-
+  /**
+   * @param {string} dateISOS: a date in the format ISO
+   * This function extracts the time (Hour, Minute) in the given date
+   * @return {string}: a string which gives the Hour and Minute
+   */
   extractTime(dateISOS: string): string {
     return formatDate(dateISOS, 'shortTime', 'en-US');
   }
 
-
-  convert12To24(time, moment): number {
+  /**
+   * @param {string} time: an hour
+   * @param {string} moment: AM or PM
+   * Transform an hour given in the format 12h to the format 24h
+   * @return {number}: the given hour in the format 24h
+   */
+  convert12To24(time: string, moment: string): number {
     if (moment === 'PM' && time !== '12') {
       return (parseInt(time, 10) + 12);
     } else {
@@ -292,7 +339,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
-
+  /**
+   * @param idCard: the id/number of the scanned card
+   * This function calls a function to set the position of the user in the database.
+   * According to the movement (in or out) it will do some treatments to know if it's an organizer who
+   * shows up to his event or it's necessary to update the end of the current event
+   */
   setUserPosition(idCard): void {
     this.httpService.postUserPosition(idCard, this.selectedRoom['Name'])
       .subscribe(move => {
@@ -316,6 +368,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           }
         }
       }, (err: HttpErrorResponse) => {
+        // Error 404: the card is not associated to a user
         if (err['status'] === 404) {
           this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
         } else if (err['status'] === 500) {
@@ -391,14 +444,8 @@ export class RoomComponent implements OnInit, OnDestroy {
     if (this.events[this.nextEventPos + 1]) {
       this.nextEvent = this.events[this.nextEventPos + 1];
       this.nextEventPos = this.nextEventPos + 1;
-      const now = new Date();
       const startTime = this.determineStartTime(this.nextEvent);
-      this.timeToWaitStart = startTime - now.getTime();
-      if (this.timeToWaitStart < 0) {
-        this.timeToWaitStart = 0;
-      }
       this.startTimer(startTime);
-      console.log(this.timeToWaitStart);
     } else {
       this.nextEvent = [];
       this.nextEventPos = -1;

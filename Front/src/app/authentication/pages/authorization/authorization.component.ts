@@ -20,8 +20,10 @@ export class AuthorizationComponent implements OnInit {
     this.route.queryParams.subscribe(paramsId => {
       this.service.postCode(paramsId.code)
         .subscribe(() => {
+          // If status 200: the authorization is good
           this.router.navigate(['/user']);
         }, (err: HttpErrorResponse) => {
+          // If status 500: internal error
           this.router.navigate(['/server-error', 'Internal Error']);
         });
     });

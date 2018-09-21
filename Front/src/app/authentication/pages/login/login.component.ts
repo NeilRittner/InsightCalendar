@@ -20,21 +20,28 @@ export class LoginComponent implements OnInit {
     private toastr: ToastrService
   ) { }
 
-  @ViewChild('scan') scanElement: ElementRef;
+  @ViewChild('scan') scanElement: ElementRef; // The scan element
   idCardControl = new FormControl();  // FormControl for scan
-  timeToastr = 1500;
+  timeToastr = 1500;  // Toastr notifications time
 
+  /**
+   * Calls when the user want to log-in with his Google Account
+   */
   signinWithGoogle(): void {
     const socialPlatformProvider = GoogleLoginProvider.PROVIDER_ID;
     this.authService.signIn(socialPlatformProvider).then(userData => {
       this.service.postGoogleToken(userData.idToken)
         .subscribe((data: string) => {
+          // If data: it means that the application need the authorization to manage the user's calendar
           if (data) {
+            // data = url of the authorization page
             window.location.href = data;
           } else {
+            // No data: the user has already authorized the application
             this.router.navigate(['/user']);
           }
         }, (err: HttpErrorResponse) => {
+          // Error 498: fake token
           if (err['status'] === 498) {
             this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
           } else if (err['status'] === 500) {
@@ -44,21 +51,26 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  /**
+   * @param {*} idCard: the id/number of the scanned card
+   * Calls when the user scans his card to log-in
+   */
   signinWithCard(idCard): void {
     this.service.postCardId(idCard)
       .subscribe(() => {
         this.router.navigate(['/user']);
       }, (err: HttpErrorResponse) => {
+        // Error 404: the card is not associated to a user
         if (err['status'] === 404) {
           this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
         } else if (err['status'] === 500) {
           this.router.navigate(['/server-error', 'Internal Error']);
         }
       });
-    this.idCardControl.reset();
   }
 
   ngOnInit() {
+    // Focus on the scanElement, the user can scan his card without selecting the scanElement
     this.scanElement.nativeElement.focus();
   }
 
