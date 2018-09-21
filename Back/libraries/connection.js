@@ -9,6 +9,11 @@ const pool = require('../db/pool');
 
 // The functions
 module.exports = {
+  /**
+   * @param {string} token: The token sent by the front (token given by Google)
+   * This function verify the token
+   * @return {JSON}: return a JSON Object sent by Google with information about the user
+   */
   verifyGoogleToken: async function (token) {
     const client = new OAuth2Client(process.env.CLIENT_ID);
     const ticket = await client.verifyIdToken({
@@ -19,6 +24,12 @@ module.exports = {
     return payload;
   },
 
+  /**
+   * @param {JSON} googleUserInfo: Google informtion (= payload) about the user
+   * This function get the information about the user who wants to login
+   * If the user does not exist in database, it inserts him
+   * @return {Promise}: Promise with a JSON Object which contains the Name/Email/GoogleId of the user
+   */
   getUserInformation: function (googleUserInfo) {
     return new Promise((resolve, reject) => {
       util.googleUserExist(googleUserInfo['sub'])
@@ -38,6 +49,12 @@ module.exports = {
     });
   },
 
+  /**
+   * @param {JSON} googleUserInfo: Google informtion (= payload) about the user
+   * @param {string} idCard: id of the user's card, null if not supplied
+   * This function inserts the user in the database
+   * @return {Promise}: Promise with the Name/Email/GoogleId of the user
+   */
   insertNewUser: function (googleUserInfo, idCard = null) {
     const googleId = googleUserInfo['sub'];
     const fName = googleUserInfo['family_name'];
@@ -74,6 +91,11 @@ module.exports = {
     });
   },
 
+  /**
+   * @param {string} idCard: id of the user's card
+   * This function returns the Name/Email/GoogleId of the user according to the idCard
+   * @return {Promise}: Promise with the information about the user (or no information found)
+   */
   verifyCard: function (idCard) {
     const query = `SELECT IdGoogle, LastName, FirstName, Email FROM users WHERE IdCard = ${idCard}`;
     return new Promise((resolve, reject) => {
@@ -93,6 +115,14 @@ module.exports = {
     });
   },
 
+  /**
+   * @param {JSON} googleUserInfo: Google informtion (= payload) about the user
+   * @param {string} idCard: id of the user's card
+   * This functions manages the registeration of a card
+   * If the user does not exist, it inserts him
+   * If the user already has a card associated, it replaces the card
+   * @return {Promise}: Promise with the Name/Mail/GoogleId of the user
+   */
   registerCard: function (googleUserInfo, idCard) {
     return new Promise((resolve, reject) => {
       util.googleUserExist(googleUserInfo['sub'])
@@ -133,6 +163,14 @@ module.exports = {
     });
   },
 
+  /**
+   * @param {JSON} googleUserId: user's GoogleId
+   * @param {string} idCard: id of the user's card
+   * This function updates the card number associated to the user
+   * If the card was associated to another user, 
+   * it removes the precend user to do not have multiple users link to one card.
+   * @return {Promise}: Promise to tell the card number is updated
+   */
   updateCard: function (googleUserId, idCard) {
     return new Promise((resolve, reject) => {
       util.removeUserFromCard(idCard)
@@ -140,7 +178,7 @@ module.exports = {
           const query = `UPDATE users SET IdCard = ${idCard} WHERE IdGoogle = ${googleUserId}`;
           pool.calendar_pool.query(query, function (err) {
             if (!err) {
-              resolve('row updated');
+              resolve();
             }
             else {
               reject(err);

@@ -48,7 +48,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 /**
  * Route: googleAccess
  * This route is used to verify the idToken sent by the client-side and set the session user.
- * Return a status code:
+ * Returns a status code:
  * 200: OK
  * 500: Internal Error
  * 498: Token not valid
@@ -88,7 +88,7 @@ app.post('/googleAccess', function (req, res) {
 /**
  * Route: cardAccess
  * This route is used to verify the id of the card sent by the client-side and set the session user.
- * Return a status code and a message if necessary:
+ * Returns a status code and a message if necessary:
  * 200: OK or no card associated
  * 500: Internal Error
  */
@@ -118,7 +118,7 @@ app.post('/cardAccess', function (req, res) {
 /**
  * Route: registerCard
  * This route is used to link an idCard to a user (for the IoT Access enabled).
- * Return a status code:
+ * Returns a status code:
  * 200: OK
  * 500: Internal Error
  * 498: Token not valid
@@ -157,7 +157,7 @@ app.post('/registerCard', function (req, res) {
 /**
  * Route: code
  * This route will be used to receive the code, exchange it against the access and refresh tokens and store them.
- * Return a status code:
+ * Returns a status code:
  * 200: OK
  * 500: Internal Error
  */
@@ -181,7 +181,7 @@ app.post('/code', function (req, res) {
 /**
  * Route: currentUser
  * This route is used to send information about the currentUser to the client-side.
- * Return a json object as :
+ * Returns a json object as :
  * { 'IdGoogle':, 'LastName':, 'FirstName':, 'Email': }
  */
 app.get('/currentUser', function (req, res) {
@@ -194,13 +194,15 @@ app.get('/currentUser', function (req, res) {
 });
 
 /**
- * 
+ * Route: userCalendar
+ * This route returns the calendar 'calendarId' according to the given 'timescale'.
+ * Returns an array of events or 500: Internal Error
  */
 app.get('/userCalendar', function (req, res) {
   authClient.setCredentials(req.session.tokens);
   calendars.getCalendar(authClient, req.query.calendarId, req.query.timescale)
     .then(events => {
-      res.send(events);
+      res.status(200).send(events);
     })
     .catch(err => {
       res.status(500).send(err);
@@ -208,7 +210,12 @@ app.get('/userCalendar', function (req, res) {
 });
 
 /**
- * 
+ * Route: createEvent
+ * This route is used to create an event.
+ * In the body: the information to create the event.
+ * Returns a status code and a message if necessary :
+ * - 200: no message or room not available (then the event is not created)
+ * - 500: Internal Error
  */
 app.post('/createEvent', function (req, res) {
   authClient.setCredentials(req.session.tokens);
@@ -223,13 +230,13 @@ app.post('/createEvent', function (req, res) {
       }
     })
     .catch(err => {
-      console.log(err);
       res.status(500).send(err);
     });
 });
 
 /**
- * 
+ * Route: allRooms
+ * This route returns the Name and Email of the 4 rooms or 500: Internal Error.
  */
 app.get('/allRooms', function (req, res) {
   util.getAllRoom()
@@ -242,7 +249,8 @@ app.get('/allRooms', function (req, res) {
 });
 
 /**
- * 
+ * Route: allUsers
+ * This route returns the Name and Email of the users or 500: Internal Error.
  */
 app.get('/allUsers', function (req, res) {
   util.getAllUsers()
@@ -255,7 +263,12 @@ app.get('/allUsers', function (req, res) {
 });
 
 /**
- * 
+ * Route: updatePosition
+ * This route is used to change the position of a user.
+ * Returns a status code and a message :
+ * - 200: move = 'in' or 'out' to know if the user check-in or check-out of the room
+ * - 404: the card is not associated to a user
+ * - 500: Internal Error
  */
 app.post('/updatePosition', function (req, res) {
   position.getMove(req.body.userIdCard, req.body.roomName)
@@ -280,7 +293,12 @@ app.post('/updatePosition', function (req, res) {
 });
 
 /** 
- * 
+ * Route: cancelEvent
+ * This route is used to cancel an event.
+ * Returns a status code and a message:
+ * - 200: return the eventRemoved
+ * - 403: the event cannot be canceled (see message)
+ * - 500: Internal Error
  */
 app.post('/cancelEvent', function (req, res) {
   util.getTokensFromEmail(req.body.organizerEmail)
@@ -289,7 +307,6 @@ app.post('/cancelEvent', function (req, res) {
         authClient.setCredentials(tokens);
         calendars.cancelEvent(authClient, req.body.organizerEmail, req.body.eventId)
           .then(eventRemoved => {
-            console.log('eventRemoved');
             ev.emit('eventRemoved', eventRemoved);
             res.status(200).send(eventRemoved);
           })
@@ -307,7 +324,12 @@ app.post('/cancelEvent', function (req, res) {
 });
 
 /**
- * 
+ * Route: updateEndEvent
+ * This route is used to change the end of an event.
+ * Returns a status code and a message:
+ * - 200: return the event updated
+ * - 403: the event cannot be updated (see message)
+ * - 500: Internal Error
  */
 app.post('/updateEndEvent', function (req, res) {
   util.getTokensFromEmail(req.body.organizerEmail)
@@ -332,7 +354,11 @@ app.post('/updateEndEvent', function (req, res) {
 });
 
 /**
- * 
+ * Route: roomInformation
+ * This route is used to have the information (Name/Email/Occupancy) of a specific room.
+ * Returns a status code and a message:
+ * - 200: return the data of the room
+ * - 500: Internal Error 
  */
 app.get('/roomInformation', function (req, res) {
   util.getRoomInformation(req.query.roomName)
@@ -345,7 +371,11 @@ app.get('/roomInformation', function (req, res) {
 });
 
 /**
- * 
+ * Route: organizersAttendance
+ * This route is used to know if the organizer (or one of them) is in the room.
+ * Returns a status code and a message:
+ * - 200: 'yes' or 'no'
+ * - 500: Internal Error
  */
 app.get('/organizersAttendance', function (req, res) {
   util.organizersAttendance(req.query.organizerEmail, req.query.eventId, req.query.roomName)
@@ -358,7 +388,11 @@ app.get('/organizersAttendance', function (req, res) {
 });
 
 /**
- * 
+ * Route: organizerScan
+ * This route is used to know if it's the organizer of the event (or one of them) who has scan his card.
+ * Returns a status code and a message:
+ * - 200: 'yes' or 'no'
+ * - 500: Internal Error
  */
 app.get('/organizersScan', function (req, res) {
   util.organizersScan(req.query.idCard, req.query.organizerEmail, req.query.eventId)

@@ -356,6 +356,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         }, (err: HttpErrorResponse) => {
           if (err['status'] === 404) {
             this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
+            resolve(false);
           } else if (err['status'] === 500) {
             this.router.navigate(['/server-error', 'Internal Error']);
           }

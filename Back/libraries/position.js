@@ -6,6 +6,14 @@ const util = require('./utilitaries');
 const pool = require('../db/pool');
 
 module.exports = {
+  /**
+   * @param {string} userIdCard: the id (number) of the scaned card
+   * @param {string} scanPosition: The name of the room where the user scaned his card
+   * @param {string} move: in or out. Allow to know if the user check-in or check-out
+   * This function calls the functions to: 
+   * update the position of the user and update the occupancy of the room given
+   * @return {Promise}: Promise to tell the update is finished
+   */
   updatePositionAndOccupancy: function (userIdCard, scanPosition, move) {
     return new Promise((resolve, reject) => {
       this.updateUserPosition(userIdCard, scanPosition, move)
@@ -24,6 +32,13 @@ module.exports = {
     });
   },
 
+  /**
+   * @param {string} userIdCard: the id (number) of the scaned card
+   * @param {string} scanPosition: The name of the room where the user scaned his card
+   * @param {string} move: in or out. Allow to know if the user check-in or check-out
+   * This function updates the position of the user in the database (null if the user is not in a room)
+   * @return {Promise}: Promise to tell the update is finished
+   */
   updateUserPosition: function (userIdCard, scanPosition, move) {
     return new Promise((resolve, reject) => {
       let query = ``;
@@ -45,6 +60,12 @@ module.exports = {
     });
   },
 
+  /**
+   * @param {string} roomName: The name of the room where the user scaned his card
+   * @param {string} move: in or out. Allow to know if the user check-in or check-out
+   * This function updates the occupancy of the given room in database
+   * @return {Promise}: Promise to tell the update is finished
+   */
   updateRoomOccupancy: function (roomName, move) {
     let query = ``;
     if (move === 'in') {
@@ -66,6 +87,14 @@ module.exports = {
     });
   },
 
+  /**
+   * @param {string} userIdCard: the id (number) of the scaned card
+   * @param {string} scanPosition: The name of the room where the user scaned his card
+   * This function determines if the user checks-in or checks-out the given room.
+   * If the user checks-in without checks-out of the previous room, the function will
+   * update the occupancy of the previous room as well.
+   * @return {Promise}: Promise with the move (string): in if the user checks-in the given room, out if he checks-out
+   */
   getMove: function (userIdCard, scanPosition) {
     return new Promise((resolve, reject) => {
       util.getUserPosition(userIdCard)

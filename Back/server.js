@@ -19,23 +19,19 @@ app.get('/', function (req, res) {
   res.send('Welcome to the root of the server');
 });
 
-
 server.listen(process.env.SERVER_PORT);
 
-// Sockets part
-// io.sockets.on('connect', (socket) => {
-//   socket.on('disconnection', () => {
-//   });
-// });
-
+// Emit to each connected user the inserted event to update the calendar
 ev.on('eventInserted', eventInserted => {
   io.sockets.emit('eventInserted', eventInserted);
 });
 
+// Emit to each connected user the removed event to update the calendar
 ev.on('eventRemoved', eventRemoved => {
   io.sockets.emit('eventRemoved', eventRemoved);
 });
 
+// Emit to each connected user the new occupancy of the room specified in the data
 ev.on('updateOccupancy', data => {
   io.sockets.emit('updateOccupancy', data);
 });
