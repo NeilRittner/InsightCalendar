@@ -154,10 +154,8 @@ module.exports = {
             const endEvent = new Date(event['end']['dateTime']);
             const startNew = new Date(eventInfo['startDate']);
             const endNew = new Date(eventInfo['endDate']);
-            if (this.isSameDay(startEvent, startNew) || this.isSameDay(endEvent, endNew)) {
-              if (endNew > startEvent && startNew < endEvent) {
-                bool = false;
-              }
+            if (this.isBetween(startEvent, endEvent, startNew, endNew)) {
+              bool = false;
             }
           }
           resolve(bool);
@@ -171,11 +169,18 @@ module.exports = {
   /**
    * @param {Date} date1: A first date
    * @param {Date} date2: A second date
-   * This function determines if the date1 and the date2 are the same day
-   * @return {boolean}: true if date1 and date2 are the same day, false if not
+   * @param {Date} date3: A third date
+   * @param {Date} date4: A fouth date
+   * This function determines if the couple (date3, date4) is between the couple (date1, date2)
+   * in the aim to know if the new event will take place during another one or not
+   * @return {boolean}: true if date3 is between the date1 and date2, false if not
    */
-  isSameDay: function (date1, date2) {
-    if (date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth() && date1.getDate() === date2.getDate()) {
+  isBetween: function (date1, date2, date3, date4) {
+    const time1 = date1.getTime();
+    const time2 = date2.getTime();
+    const time3 = date3.getTime();
+    const time4 = date4.getTime();
+    if (time3 >= time1 && time3 <= time2 || time4 >= time1 && time4 <= time2) {
       return true;
     } else {
       return false;

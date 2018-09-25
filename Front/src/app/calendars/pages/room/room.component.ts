@@ -149,10 +149,9 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   /**
    * @param {any} data: the array of events
-   * This function do some treatments on the events (on the dates and types) and determine the next event
+   * This function do some treatments on the events (on the dates and type) and determine the next event
    */
   calendarTreatments(data: any): void {
-    console.log('treatments');
     // Clear the timers
     this.clearTimers();
 
@@ -160,7 +159,14 @@ export class RoomComponent implements OnInit, OnDestroy {
       const event = data[i];
 
       // Some treatments for the date and start/end time
-      event['date'] = this.extractDate(event['start']['dateTime']);
+      const startDate = this.extractDate(event['start']['dateTime']);
+      const endDate = this.extractDate(event['end']['dateTime']);
+      if (startDate === endDate) {
+        event['date'] = this.extractDate(event['start']['dateTime']);
+      } else {
+        event['startDate'] = startDate;
+        event['endDate'] = endDate;
+      }
       event['start']['dateTime'] = this.extractTime(event['start']['dateTime']);
       event['end']['dateTime'] = this.extractTime(event['end']['dateTime']);
 
@@ -223,12 +229,16 @@ export class RoomComponent implements OnInit, OnDestroy {
    * @return {number}: the start time in milliseconds
    */
   determineStartTime(event: any): number {
+    let dateArr;
+    if (event['date']) {
+      dateArr = event['date'].split(', ');
+    } else {
+      dateArr = event['startDate'].split(', ');
+    }
     const startTimeArr = event['start']['dateTime'].split(':');
     const startTimeH = this.convert12To24(startTimeArr[0], startTimeArr[1].split(' ')[1]).toString();
-    const dateArr = event['date'].split(', ');
     const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
       dateArr[1].split(' ')[1], parseInt(startTimeH, 10), parseInt(startTimeArr[1].split(' ')[0], 10)).getTime();
-
     return startTime;
   }
 
@@ -334,6 +344,8 @@ export class RoomComponent implements OnInit, OnDestroy {
   convert12To24(time: string, moment: string): number {
     if (moment === 'PM' && time !== '12') {
       return (parseInt(time, 10) + 12);
+    } else if (moment === 'AM' && time === '12') {
+      return 0;
     } else {
       return parseInt(time, 10);
     }
@@ -378,7 +390,11 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.idCardControl.reset();
   }
 
-
+  /**
+   * This function checks if there is a meeting currently. If it's the case, it checks if the one of the organizers
+   * of the current meeting is in the room.
+   * If yes, it will call a function to update the next event
+   */
   organizerBeforeCancel(): void {
     const eventCurrently = this.eventCurrently();
     const currentEvent = eventCurrently[0];
@@ -396,6 +412,13 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * @param idCard: the id of the scanned card
+   * @param event: information about an event (JSON Object)
+   * This function allows to know if the people who scanned his card is one of the organizers
+   * of the given event.
+   * @return {Promise<boolean>}: Promise with a boolean. True if it's an organizer, false if not.
+   */
   organizersScan(idCard, event): Promise<boolean> {
     return new Promise((resolve) => {
       const organizer = event['creator'] ? event['creator']['email'] : event['organizer']['email'];
@@ -417,6 +440,12 @@ export class RoomComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * @param event: information about an event (JSON Object)
+   * @param posEvent: the position of the event in the array of events
+   * If there is an event currently, it will checks if all organizers have left the event.
+   * If it's the case, it will update the end of the event.
+   */
   updateEndEvent(event, posEvent): void {
     this.organizersAttendance(event)
       .then(bool => {
@@ -429,6 +458,8 @@ export class RoomComponent implements OnInit, OnDestroy {
               this.events = this.events.slice();
               this.eventTitleColor();
             }, (err: HttpErrorResponse) => {
+              // Error 403: the event cannot be updated because the main organizer's tokens
+              // are not stored in the database
               if (err['status'] === 403) {
                 this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
               } else if (err['status'] === 500) {
@@ -439,6 +470,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * This function changes the next event
+   */
   newNextEvent(): void {
     this.clearTimers();
     if (this.events[this.nextEventPos + 1]) {
@@ -452,12 +486,18 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
-
-  cancelEvent(eventToCancel, roomEmail): void {
+  /**
+   * @param eventToCancel: information about an event (JSON Object)
+   * @param {string} roomEmail: the email of the selected room
+   * This function will cancel the given event
+   */
+  cancelEvent(eventToCancel, roomEmail: string): void {
     this.httpService.cancelEvent(eventToCancel['organizer']['email'], eventToCancel['id'], roomEmail)
       .subscribe(eventRemoved => {
         this.removeEvent(eventRemoved['id']);
       }, (err: HttpErrorResponse) => {
+        // Error 403: the event cannot be cancelled because the main organizer's tokens
+        // are not stored in the database
         if (err['status'] === 403) {
           this.toastr.error(err['error'], '', { timeOut: this.timeToastr });
           eventToCancel['type'] = 'danger';
@@ -469,7 +509,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
   }
 
-
+  /**
+   * This function checks if there in an event currently.
+   * @return {any}: Array with 2 things: the current event (empty if no event)
+   * and its position if the array of events (-1 if no event)
+   */
   eventCurrently(): any {
     let currentEvent = null;
     let posInEvents = -1;
@@ -479,31 +523,47 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     for (let i = 0; i < this.events.length; i++) {
       const event = this.events[i];
-      const eventStartArr = event['start']['dateTime'].split(':');
-      const eventEndArr = event['end']['dateTime'].split(':');
-      const eventStartHour24 = this.convert12To24(eventStartArr[0], eventStartArr[1].split(' ')[1]);
-      const eventEndHour24 = this.convert12To24(eventEndArr[0], eventEndArr[1].split(' ')[1]);
-      const dateArr = event['date'].split(', ');
-      const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-        dateArr[1].split(' ')[1], eventStartHour24, parseInt(eventStartArr[1].split(' ')[0], 10)).getTime();
-      const endTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
-        dateArr[1].split(' ')[1], eventEndHour24, parseInt(eventEndArr[1].split(' ')[0], 10)).getTime();
-      if (nowDate === event['date'] && startTime <= nowTime && endTime >= nowTime) {
-        currentEvent = event;
-        posInEvents = i;
+      // Event which starts and ends the same day.
+      if (event['date']) {
+        const eventStartArr = event['start']['dateTime'].split(':');
+        const eventEndArr = event['end']['dateTime'].split(':');
+        const eventStartHour24 = this.convert12To24(eventStartArr[0], eventStartArr[1].split(' ')[1]);
+        const eventEndHour24 = this.convert12To24(eventEndArr[0], eventEndArr[1].split(' ')[1]);
+        const dateArr = event['date'].split(', ');
+        const startTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+          dateArr[1].split(' ')[1], eventStartHour24, parseInt(eventStartArr[1].split(' ')[0], 10)).getTime();
+        const endTime = new Date(dateArr[2], this.months.indexOf(dateArr[1].split(' ')[0]),
+          dateArr[1].split(' ')[1], eventEndHour24, parseInt(eventEndArr[1].split(' ')[0], 10)).getTime();
+        if (nowDate === event['date'] && startTime <= nowTime && endTime >= nowTime) {
+          currentEvent = event;
+          posInEvents = i;
+        }
+      } else {
+        // Event which does not start and end the same day.
+        const nowDay = parseInt(nowDate.split(', ')[1].split(' ')[1], 10);
+        const startDay = parseInt(event['startDate'].split(', ')[1].split(' ')[1], 10);
+        const endDay = parseInt(event['endDate'].split(', ')[1].split(' ')[1], 10) - 1;
+        if (nowDay >= startDay && nowDay <= endDay) {
+          currentEvent = event;
+          posInEvents = i;
+        }
       }
     }
-
     return [currentEvent, posInEvents];
   }
 
-
+  /**
+   * This function sets up the sockets to allow the real time
+   * and do some treatments if necessary when data are received
+   */
   setupSocket(): void {
+    // When there is an event created through the application
     this.insertEventConnection = this.socketsService.eventInserted()
       .subscribe(data => {
         if (this.isRoom(this.selectedRoom['Email'], data['attendees'])) {
           this.getCalendar(this.selectedRoom['Email'])
             .then(dataGet => {
+              // Insert the event in the array of events because google take too much time to do it
               const newEventStartTime = new Date(data['start']['dateTime'].split('+')[0]).getTime();
               let newEvents;
               let index = -1;
@@ -531,6 +591,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         }
       });
 
+    // When someone scans his card
     this.updateRoomOccupancy = this.socketsService.updateOccupancy()
       .subscribe(data => {
         if (data['roomName'] === this.selectedRoom['Name']) {
@@ -543,7 +604,12 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
   }
 
-
+  /**
+   * @param {string} roomEmail: the email of the selected room
+   * @param {Array<any>} newEventAttendees: the attendees of an event (to know the room of the event)
+   * This function checks if the selected room is the room of the event
+   * @return {boolean}: true if the selected room is the room of the event, false if not
+   */
   isRoom(roomEmail: string, newEventAttendees: Array<any>): boolean {
     let isRoom = false;
     for (let i = 0; i < newEventAttendees.length; i++) {
@@ -555,7 +621,11 @@ export class RoomComponent implements OnInit, OnDestroy {
     return isRoom;
   }
 
-
+  /**
+   * @param eventId: the id of an event
+   * This function calls a function remove the event with the given id from the array of events
+   * and calls another function with the updated array
+   */
   removeEvent(eventId): void {
     this.getCalendar(this.selectedRoom['Email'])
       .then(data => {
@@ -565,7 +635,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       });
   }
 
-
+  /**
+   * @param events: array of events
+   * @param eventId: the id of the event to remove in the array
+   * This function removes the event with the given id in the given array of events
+   */
   removeEventInList(events, eventId): Array<any> {
     let index = -1;
     for (let i = 0; i < events.length; i++) {
@@ -579,7 +653,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     return events;
   }
 
-
+  /**
+   * This function determines the color of the eventTitle under the calendar
+   */
   eventTitleColor(): void {
     const event = this.eventCurrently();
     if (event[0]) {
@@ -595,7 +671,9 @@ export class RoomComponent implements OnInit, OnDestroy {
     }
   }
 
-
+  /**
+   * This function removes the sockets if they are set
+   */
   removeSockets(): void {
     if (this.insertEventConnection !== undefined) {
       this.insertEventConnection.unsubscribe();

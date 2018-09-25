@@ -33,54 +33,63 @@ export class CalendarComponent implements OnInit, OnChanges {
 
       for (let i = 0; i < this.events.length; i++) {
         const event = this.events[i];
-        const eventLongDate = new Date(event['date']);
-        const indexInDays = eventLongDate.getDay() - 1;
-        // Determine the start and end time of an event to know his size in the progressbar
-        const startTimes = event['start']['dateTime'].split(':');
-        const endTimes = event['end']['dateTime'].split(':');
-        startTimes[0] = this.adaptTime(startTimes[0], startTimes[1].split(' ')[1]);
-        endTimes[0] = this.adaptTime(endTimes[0], endTimes[1].split(' ')[1]);
-        startTimes[1] = parseInt(startTimes[1].split(' ')[0], 10);
-        endTimes[1] = parseInt(endTimes[1].split(' ')[0], 10);
+        if (event['date']) {
+          const eventLongDate = new Date(event['date']);
+          const indexInDays = eventLongDate.getDay() - 1;
+          // Determine the start and end time of an event to know his size in the progressbar
+          const startTimes = event['start']['dateTime'].split(':');
+          const endTimes = event['end']['dateTime'].split(':');
+          startTimes[0] = this.adaptTime(startTimes[0], startTimes[1].split(' ')[1]);
+          endTimes[0] = this.adaptTime(endTimes[0], endTimes[1].split(' ')[1]);
+          startTimes[1] = parseInt(startTimes[1].split(' ')[0], 10);
+          endTimes[1] = parseInt(endTimes[1].split(' ')[0], 10);
 
-        // If the event is not a Saturday or Sunday
-        if (indexInDays !== -1 && indexInDays !== 5) {
-          // Value of the event in the progressbar
-          let valueEvent = this.calculValueEvent(startTimes[0], endTimes[0], startTimes[1], endTimes[1]);
+          // If the event is not a Saturday or Sunday
+          if (indexInDays !== -1 && indexInDays !== 5) {
+            // Value of the event in the progressbar
+            let valueEvent = this.calculValueEvent(startTimes[0], endTimes[0], startTimes[1], endTimes[1]);
 
-          // Value before the event if it's the first event of the day
-          if (!exEventLongDate || exEventLongDate.getDate() !== eventLongDate.getDate()) {
-            exEventLongDate = eventLongDate;
-            const valueBefore = ((startTimes[0] - 9) * (100 / this.nbHours)) + (startTimes[1] * (100 / (this.nbHours * 60)));
-            if (valueBefore > 0) {
-              this.pushInDays(indexInDays, valueBefore, 'success', '');
+            // Value before the event if it's the first event of the day
+            if (!exEventLongDate || exEventLongDate.getDate() !== eventLongDate.getDate()) {
+              exEventLongDate = eventLongDate;
+              const valueBefore = ((startTimes[0] - 9) * (100 / this.nbHours)) + (startTimes[1] * (100 / (this.nbHours * 60)));
+              if (valueBefore > 0) {
+                this.pushInDays(indexInDays, valueBefore, 'success', '');
+              }
             }
-          }
 
-          // Value after the event and before the following one
-          let valueAfter;
-          if (this.events[i + 1] && this.events[i + 1]['date'] === event['date']) {
-            const startTimesNext = this.events[i + 1]['start']['dateTime'].split(':');
-            startTimesNext[0] = this.adaptTime(startTimesNext[0], startTimesNext[1].split(' ')[1]);
-            valueAfter = this.calculValueAfter(startTimesNext[0], endTimes[0], startTimesNext[1].split(' ')[0], endTimes[1]);
-          } else {
-            valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
-          }
-          if (valueEvent > 0) {
-            if (valueAfter > 0 || (this.events[i + 1] && this.events[i + 1]['date'] !== event['date'])) {
-              this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
-              this.pushInDays(indexInDays, valueAfter, 'success', '');
-            } else if (valueAfter === 0 && endTimes[0] >= 18) {
-              this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+            // Value after the event and before the following one
+            let valueAfter;
+            if (this.events[i + 1] && this.events[i + 1]['date'] === event['date']) {
+              const startTimesNext = this.events[i + 1]['start']['dateTime'].split(':');
+              startTimesNext[0] = this.adaptTime(startTimesNext[0], startTimesNext[1].split(' ')[1]);
+              valueAfter = this.calculValueAfter(startTimesNext[0], endTimes[0], startTimesNext[1].split(' ')[0], endTimes[1]);
             } else {
-              // If two straight events: put a little separation
-              const valueInterEvent = 0.15;
-              valueEvent = valueEvent - valueInterEvent;
-              this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
-              this.pushInDays(indexInDays, valueInterEvent, 'info', '');
+              valueAfter = this.calculValueAfter(18, endTimes[0], 0, endTimes[1]);
             }
-          } else {
-            this.pushInDays(indexInDays, valueAfter, 'success', '');
+            if (valueEvent > 0) {
+              if (valueAfter > 0 || (this.events[i + 1] && this.events[i + 1]['date'] !== event['date'])) {
+                this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+                this.pushInDays(indexInDays, valueAfter, 'success', '');
+              } else if (valueAfter === 0 && endTimes[0] >= 18) {
+                this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+              } else {
+                // If two straight events: put a little separation
+                const valueInterEvent = 0.15;
+                valueEvent = valueEvent - valueInterEvent;
+                this.pushInDays(indexInDays, valueEvent, event['type'], event['summary']);
+                this.pushInDays(indexInDays, valueInterEvent, 'info', '');
+              }
+            } else {
+              this.pushInDays(indexInDays, valueAfter, 'success', '');
+            }
+          }
+        } else {
+          const res = this.determineDays(event['startDate'], event['endDate']);
+          const length = res[0];
+          const first = res[1];
+          for (let j = first; j < (first + length); j++) {
+            this.pushInDays(j, 100, event['type'], event['summary']);
           }
         }
       }
@@ -134,6 +143,24 @@ export class CalendarComponent implements OnInit, OnChanges {
         }
       }
     }
+  }
+
+  /**
+   * @param {string} startDate: the start date
+   * @param {string} endDate: the end date
+   * This function determines how long is an event (in days) if the event takes place on several days
+   * @return {Array<number>}: First number: the length of the event (in days), Second number: the index of the first day
+   */
+  determineDays(startDate: string, endDate: string): Array<number> {
+    let startDay = this.weekDays.findIndex(day => day === startDate.split(', ')[0]);
+    let endDay = this.weekDays.findIndex(day => day === endDate.split(', ')[0]);
+    if (startDay === -1) {
+      startDay = 0;
+    }
+    if (endDay === -1) {
+      endDay = 5;
+    }
+    return [endDay - startDay, startDay];
   }
 
   /**

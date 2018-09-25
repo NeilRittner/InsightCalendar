@@ -32,14 +32,28 @@ export class UserComponent implements OnInit, OnDestroy {
   removeEventConnection;
   insertEventConnection;
 
+  /**
+   * @param {string} dateISOS: a date in the format ISO
+   * This function extracts the date (Year, Month, Day) in the given date
+   * @return {string}: a string which gives the Year, Month, Day
+   */
   extractDate(dateISOS: string): string {
     return formatDate(dateISOS, 'fullDate', 'en-US');
   }
 
+  /**
+   * @param {string} dateISOS: a date in the format ISO
+   * This function extracts the time (Hour, Minute) in the given date
+   * @return {string}: a string which gives the Hour and Minute
+   */
   extractTime(dateISOS: string): string {
     return formatDate(dateISOS, 'shortTime', 'en-US');
   }
 
+  /**
+   * @param {string} timescale: a timescale (optional)
+   * This function calls a function to get the calendar of the user, and then, another one to do treatmens on the data
+   */
   setCalendar(timescale?: string): void {
     if (timescale) {
       this.timescale = timescale;
@@ -50,6 +64,11 @@ export class UserComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * @param timescale: a timescale (optional)
+   * This function calls a function to get the calendar of the user
+   * @return {Promise<any>}: Promise with an array of events (JSON Object)
+   */
   getCalendar(timescale?: string): Promise<any> {
     return new Promise((resolve) => {
       this.httpService.getCalendar('primary', timescale)
@@ -63,6 +82,9 @@ export class UserComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * This function refresh automatically the page
+   */
   refreshCalendarTimer(): void {
     setTimeout(() => {
       this.setCalendar();
@@ -70,6 +92,10 @@ export class UserComponent implements OnInit, OnDestroy {
     }, this.timeOutRefresh);
   }
 
+  /**
+   * @param {any} data: the array of events
+   * This function do some treatments on the events (on the dates and type) and determine the next event
+   */
   calendarTreatments(data: any): void {
     for (let i = 0; i < data.length; i++) {
       const event = data[i];
@@ -81,7 +107,12 @@ export class UserComponent implements OnInit, OnDestroy {
     this.events = data;
   }
 
+  /**
+   * This function sets up the sockets to allow the real time
+   * and do some treatments if necessary when data are received
+   */
   setupSockets(): void {
+    // When there is an event created through the application
     this.insertEventConnection = this.socketsService.eventInserted()
       .subscribe(dataInsert => {
         if (this.userInMeeting(this.dataService.user['Email'], dataInsert['attendees'])) {
@@ -112,6 +143,7 @@ export class UserComponent implements OnInit, OnDestroy {
         }
       });
 
+    // When there an event is removed
     this.removeEventConnection = this.socketsService.eventRemoved()
       .subscribe(data => {
         if (this.userInMeeting(this.dataService.user['Email'], data['attendees'])) {
@@ -120,6 +152,12 @@ export class UserComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * @param {string} userEmail: the user's email
+   * @param {Array<any>} newEventAttendees: the attendees of an event
+   * This function checks if the user is an attendee of an cancelled event.
+   * @return {boolean}: true if user is an attendee, false if not
+   */
   userInMeeting(userEmail: string, newEventAttendees: Array<any>): boolean {
     let inAttendees = false;
     for (let i = 0; i < newEventAttendees.length; i++) {
@@ -131,6 +169,11 @@ export class UserComponent implements OnInit, OnDestroy {
     return inAttendees;
   }
 
+  /**
+   * @param eventId: the id of an event
+   * This function calls a function remove the event with the given id from the array of events
+   * and calls another function with the updated array
+   */
   removeEvent(eventId): void {
     this.getCalendar()
       .then(data => {
@@ -139,6 +182,11 @@ export class UserComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * @param events: array of events
+   * @param eventId: the id of the event to remove in the array
+   * This function removes the event with the given id in the given array of events
+   */
   removeEventInList(events, eventId): Array<any> {
     let index = -1;
     for (let i = 0; i < events.length; i++) {
@@ -152,6 +200,18 @@ export class UserComponent implements OnInit, OnDestroy {
     return events;
   }
 
+  /**
+   * This function removes the sockets if they are set
+   */
+  removeSockets(): void {
+    if (this.insertEventConnection !== undefined) {
+      this.insertEventConnection.unsubscribe();
+    }
+    if (this.removeEventConnection !== undefined) {
+      this.removeEventConnection.unsubscribe();
+    }
+  }
+
   ngOnInit() {
     if (JSON.stringify(this.dataService.user) === '{}') {
       this.dataService.getUser();
@@ -161,12 +221,7 @@ export class UserComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.insertEventConnection !== undefined) {
-      this.insertEventConnection.unsubscribe();
-    }
-    if (this.removeEventConnection !== undefined) {
-      this.removeEventConnection.unsubscribe();
-    }
+    this.removeSockets();
   }
 
 }

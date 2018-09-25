@@ -205,6 +205,7 @@ app.get('/userCalendar', function (req, res) {
       res.status(200).send(events);
     })
     .catch(err => {
+      console.log(err);
       res.status(500).send(err);
     });
 });
